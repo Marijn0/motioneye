@@ -3391,11 +3391,6 @@ function fetchCurrentConfig(onFetch) {
                 updateConfigUI();
             }
             else { /* normal user */
-                if (!cameras.length) {
-                    /* normal user with no cameras doesn't make too much sense - force login */
-                    doLogout();
-                }
-
                 $('#cameraSelect').hide();
                 $('#remCameraButton').hide();
 
@@ -5155,13 +5150,24 @@ function recreateCameraFrames(cameras) {
         }
 
         var query = splitUrl().params;
-        if ($('#cameraSelect').find('option').length < 2 && isAdmin() && !query.camera_ids) {
-            /* invite the user to add a camera */
-            var addCameraLink = $('<div class="add-camera-message">' +
+        if (!cameras.length && !query.camera_ids) {
+            var noCameraMessageEl;
+
+            if (isAdmin()) {
+                /* Message for admins: invite to add a camera */
+                noCameraMessageEl = $('<div class="add-camera-message">' +
                     '<a href="javascript:runAddCameraDialog()">' +
                     i18n.gettext('Vi ankoraŭ ne agordis iun kameraon. Alklaku ĉi tie por aldoni unu ...') +
                     '</a></div>');
-            getPageContainer().append(addCameraLink);
+            }
+            else {
+                /* Message for non-admins: informative */
+                noCameraMessageEl = $('<div class="add-camera-message"><span>' +
+                    i18n.gettext('No cameras are currently configured or accessible. Please log in with an admin account to add one.') +
+                    '</span></div>');
+            }
+
+            getPageContainer().append(noCameraMessageEl);
         }
     }
 
