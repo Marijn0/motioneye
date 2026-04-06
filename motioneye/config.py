@@ -841,6 +841,33 @@ def main_ui_to_dict(ui):
     if ui.get('lang') is not None:
         data['@lang'] = ui['lang']
 
+    if ui.get('webcontrol_port') is not None:
+        data['webcontrol_port'] = int(ui['webcontrol_port'])
+
+    if ui.get('webcontrol_auth_method') is not None:
+        data['webcontrol_auth_method'] = ui['webcontrol_auth_method']
+
+    webcontrol_username = ui.get('webcontrol_username')
+    webcontrol_password = ui.get('webcontrol_password')
+    if webcontrol_username is not None or webcontrol_password is not None:
+        prev_authentication = (get_main().get('webcontrol_authentication') or '').split(':', 1)
+        prev_username = prev_authentication[0]
+        prev_password = prev_authentication[1] if len(prev_authentication) > 1 else ''
+
+        if webcontrol_username is None:
+            webcontrol_username = prev_username
+
+        # The UI sends "*****" when the password is unchanged.
+        if webcontrol_password in (None, '*****'):
+            webcontrol_password = prev_password
+
+        if webcontrol_username:
+            data['webcontrol_authentication'] = (
+                str(webcontrol_username) + ':' + str(webcontrol_password)
+            )
+        else:
+            data['webcontrol_authentication'] = ''
+
     # additional configs
     for name, value in list(ui.items()):
         if not name.startswith('_'):
@@ -873,6 +900,15 @@ def main_dict_to_ui(data):
 
     else:
         ui['normal_password'] = ''
+
+    ui['webcontrol_port'] = int(data.get('webcontrol_port', settings.MOTION_CONTROL_PORT))
+    ui['webcontrol_auth_method'] = data.get('webcontrol_auth_method', 'none')
+
+    webcontrol_authentication = (data.get('webcontrol_authentication') or '').split(':', 1)
+    ui['webcontrol_username'] = webcontrol_authentication[0]
+    ui['webcontrol_password'] = (
+        '*****' if len(webcontrol_authentication) > 1 and webcontrol_authentication[1] else ''
+    )
 
     # additional configs
     for name, value in list(data.items()):
@@ -965,16 +1001,11 @@ def motion_camera_ui_to_dict(ui, prev_config=None):
         'text_scale': ui['text_scale'],
         # streaming
         'stream_localhost': not ui['video_streaming'],
-        'stream_port': int(ui['streaming_port']),
         'stream_maxrate': int(ui['streaming_framerate']),
         'stream_quality': max(1, int(ui['streaming_quality'])),
         '@webcam_resolution': max(1, int(ui['streaming_resolution'])),
         '@webcam_server_resize': ui['streaming_server_resize'],
         'stream_motion': ui['streaming_motion'],
-        'stream_auth_method': {'disabled': 0, 'basic': 1, 'digest': 2}.get(
-            ui['streaming_auth_mode'], 0
-        ),
-        'stream_authentication': '',
         '@lang': main_config['@lang'],
         # still images
         'picture_output': False,
@@ -1022,27 +1053,6 @@ def motion_camera_ui_to_dict(ui, prev_config=None):
         'on_picture_save': '',
     }
 
-    if data.get('stream_auth_method', 0) > 0:
-        streaming_username = ui.get('streaming_username')
-        streaming_password = ui.get('streaming_password')
-
-        prev_stream_authentication = prev_config.get('stream_authentication')
-        parts = (prev_stream_authentication or '').split(':', 1)
-        prev_stream_username = parts[0]
-        prev_stream_password = parts[1] if len(parts) > 1 else ''
-
-        if not streaming_username:
-            streaming_username = prev_stream_username
-
-        # UI omits the password when unchanged.
-        if not streaming_password:
-            streaming_password = prev_stream_password
-
-        # No hard fail: if still missing, keep stream_authentication empty.
-        if streaming_username and streaming_password:
-            data['stream_authentication'] = (
-                str(streaming_username) + ':' + str(streaming_password)
-            )
 
     if utils.is_v4l2_camera(prev_config):
         proto = 'v4l2'
@@ -1460,6 +1470,7 @@ def motion_camera_dict_to_ui(data):  # noqa: C901
         'name': data['camera_name'],
         'enabled': data['@enabled'],
         'id': data['@id'],
+        'motion_camera_id': motionctl.camera_id_to_motion_camera_id(data['@id']),
         'admin_only': data.get('@admin_only', False),
         'auto_brightness': data['auto_brightness'],
         'framerate': int(data['framerate']),
@@ -1505,16 +1516,14 @@ def motion_camera_dict_to_ui(data):  # noqa: C901
         'custom_right_text': '',
         # streaming
         'video_streaming': not data['stream_localhost'],
+        'webcontrol_port': int(
+            data.get('webcontrol_port')
+            or get_main().get('webcontrol_port', settings.MOTION_CONTROL_PORT)
+        ),
         'streaming_framerate': int(data['stream_maxrate']),
         'streaming_quality': int(data['stream_quality']),
         'streaming_resolution': int(data['@webcam_resolution']),
         'streaming_server_resize': data['@webcam_server_resize'],
-        'streaming_port': int(data['stream_port']),
-        'streaming_auth_mode': {0: 'disabled', 1: 'basic', 2: 'digest'}.get(
-            data.get('stream_auth_method'), 'disabled'
-        ),
-        'streaming_username': '',
-        'streaming_password': '',
         'streaming_motion': int(data['stream_motion']),
         # still images
         'still_images': False,
@@ -1576,13 +1585,6 @@ def motion_camera_dict_to_ui(data):  # noqa: C901
         'sunday_to': '',
     }
 
-    stream_authentication = data.get('stream_authentication') or ''
-    if stream_authentication:
-        parts = stream_authentication.split(':', 1)
-        streaming_username = parts[0]
-        streaming_password = parts[1] if len(parts) > 1 else ''
-        ui['streaming_username'] = streaming_username
-        ui['streaming_password'] = '*****' if streaming_password else ''
 
     if utils.is_net_camera(data):
         ui['device_url'] = data['netcam_url']
@@ -2338,6 +2340,8 @@ def _set_default_motion(data):
     data.setdefault('webcontrol_localhost', settings.MOTION_CONTROL_LOCALHOST)
     # the advanced list of parameters will be available
     data.setdefault('webcontrol_parms', 2)
+    data.setdefault('webcontrol_auth_method', 'none')
+    data.setdefault('webcontrol_authentication', '')
 
 
 def _set_default_motion_camera(camera_id, data):

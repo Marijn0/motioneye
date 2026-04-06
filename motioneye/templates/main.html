@@ -691,28 +691,28 @@
                         </tr>
                         <tr class="settings-item" min="1024" max="65535" depends="videoStreamingEnabled" required="true">
                             <td class="settings-item-label"><span class="settings-item-label">{{ _("Flua haveno") }}</span></td>
-                            <td class="settings-item-value"><input type="text" class="styled streaming camera-config" id="streamingPortEntry"></td>
+                            <td class="settings-item-value"><input type="text" class="styled streaming main-config" id="webcontrolPortEntry"></td>
                             <td><span class="help-mark" title="{{ _("starigas la TCP-havenon, sur kiu aŭskultas la ret-servila ret-servo") }}">?</span></td>
                         </tr>
                         <tr class="settings-item" depends="videoStreamingEnabled">
                             <td class="settings-item-label"><span class="settings-item-label">{{ _("Aŭtentiga reĝimo") }}</span></td>
                             <td class="settings-item-value">
-                                <select class="styled streaming camera-config" id="streamingAuthModeSelect">
-                                    <option value="disabled">{{ _("Malebligita") }}</option>
+                                <select class="styled streaming main-config" id="webcontrolAuthMethodSelect">
+                                    <option value="none">{{ _("Malebligita") }}</option>
                                     <option value="basic">Basic</option>
                                     <option value="digest">Digest</option>
                                 </select>
                             </td>
                             <td><span class="help-mark" title="{{ _("la aŭtentiga metodo uzata de la rivereto (elektu 'Bazic' anstataŭ 'Digest' se vi renkontas problemojn kun triaj programoj); akreditoj kontroloj estos uzataj") }}">?</span></td>
                         </tr>
-                        <tr class="settings-item" required="true" strip="true" depends="videoStreamingEnabled streamingAuthMode=(basic|digest)">
+                        <tr class="settings-item" required="true" strip="true" depends="videoStreamingEnabled webcontrolAuthMethod=(basic|digest)">
                             <td class="settings-item-label"><span class="settings-item-label">{{ _("Uzantnomo") }}</span></td>
-                            <td class="settings-item-value"><input type="text" autocapitalize="none" class="styled streaming camera-config" id="streamingUsernameEntry"></td>
+                            <td class="settings-item-value"><input type="text" autocapitalize="none" class="styled streaming main-config" id="webcontrolUsernameEntry"></td>
                             <td><span class="help-mark" title="{{ _("username used for video streaming authentication. When Admin-only access is enabled, use credentials different from the Surveillance user.") }}">?</span></td>
                         </tr>
-                        <tr class="settings-item" required="true" strip="true" depends="videoStreamingEnabled streamingAuthMode=(basic|digest)">
+                        <tr class="settings-item" required="true" strip="true" depends="videoStreamingEnabled webcontrolAuthMethod=(basic|digest)">
                             <td class="settings-item-label"><span class="settings-item-label">{{ _("Pasvorto") }}</span></td>
-                            <td class="settings-item-value"><input type="password" autocomplete="new-password" class="styled streaming camera-config" id="streamingPasswordEntry"></td>
+                            <td class="settings-item-value"><input type="password" autocomplete="new-password" class="styled streaming main-config" id="webcontrolPasswordEntry"></td>
                             <td><span class="help-mark" title="{{ _("password used for video streaming authentication. When Admin-only access is enabled, use credentials different from the Surveillance user.") }}">?</span></td>
                         </tr>
                         <tr class="settings-item">

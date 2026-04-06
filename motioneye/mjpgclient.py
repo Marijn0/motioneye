@@ -44,6 +44,7 @@ class MjpgClient(IOStream):
         self._password = password or ''
         self._auth_mode = auth_mode
         self._auth_digest_state = {}
+        self._stream_path = motionctl.get_stream_path(camera_id=camera_id)
 
         self._last_access = 0
         self._last_jpg = None
@@ -171,18 +172,20 @@ class MjpgClient(IOStream):
             logging.debug('mjpg client using basic authentication')
             auth_header = utils.build_basic_header(self._username, self._password)
             self.write(
-                f'GET / HTTP/1.0\r\nAuthorization: {auth_header}\r\n\r\n'.encode()
+                f'GET {self._stream_path} HTTP/1.0\r\nAuthorization: {auth_header}\r\n\r\n'.encode()
             )
 
         elif (
             self._auth_mode == 'digest'
         ):  # in digest auth mode, the header is built upon receiving 401
             logging.debug('digest authentication _on_connect')
-            self.write(b'GET / HTTP/1.0\r\nConnection: keep-alive\r\n\r\n')
+            self.write(
+                f'GET {self._stream_path} HTTP/1.0\r\nConnection: keep-alive\r\n\r\n'.encode()
+            )
 
         else:  # no authentication
             logging.debug('no authentication _on_connect')
-            self.write(b'GET / HTTP/1.0\r\n\r\n')
+            self.write(f'GET {self._stream_path} HTTP/1.0\r\n\r\n'.encode())
 
         self._seek_http()
 
@@ -230,7 +233,9 @@ class MjpgClient(IOStream):
             logging.debug('mjpg client using basic authentication')
 
             auth_header = utils.build_basic_header(self._username, self._password)
-            w_data = f'GET / HTTP/1.0\r\nAuthorization: {auth_header}\r\n\r\n'.encode()
+            w_data = (
+                f'GET {self._stream_path} HTTP/1.0\r\nAuthorization: {auth_header}\r\n\r\n'.encode()
+            )
             w_future = utils.cast_future(self.write(w_data))
             w_future.add_done_callback(self._seek_http)
 
@@ -247,9 +252,11 @@ class MjpgClient(IOStream):
             self._auth_digest_state = parts_dict
 
             auth_header = utils.build_digest_header(
-                'GET', '/', self._username, self._password, self._auth_digest_state
+                'GET', self._stream_path, self._username, self._password, self._auth_digest_state
             )
-            w_data = f'GET / HTTP/1.0\r\nAuthorization: {auth_header}\r\n\r\n'.encode()
+            w_data = (
+                f'GET {self._stream_path} HTTP/1.0\r\nAuthorization: {auth_header}\r\n\r\n'.encode()
+            )
             w_future = utils.cast_future(self.write(w_data))
             w_future.add_done_callback(self._seek_http)
 
@@ -326,16 +333,9 @@ def get_jpg(camera_id):
 
             return None
 
-        port = camera_config['stream_port']
+        port = config.get_main().get('webcontrol_port', settings.MOTION_CONTROL_PORT)
         username, password = None, None
         auth_mode = None
-        if camera_config.get('stream_auth_method') > 0:
-            parts = (camera_config.get('stream_authentication') or '').split(':', 1)
-            username = parts[0]
-            password = parts[1] if len(parts) > 1 else ''
-            auth_mode = (
-                'digest' if camera_config.get('stream_auth_method') > 1 else 'basic'
-            )
 
         client = MjpgClient(camera_id, port, username, password, auth_mode)
         client.do_connect()

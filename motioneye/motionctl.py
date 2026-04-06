@@ -367,6 +367,25 @@ def is_motion_post43():
     return update.compare_versions(version, '4.4') >= 0  # 4.3.2 > 4.3
 
 
+def is_motion_post50():
+    binary, version = find_motion()
+    if not binary:
+        return False
+
+    return update.compare_versions(version, '5.0') >= 0
+
+
+def get_stream_path(camera_id=None, motion_camera_id=None):
+    if is_motion_post50():
+        if motion_camera_id is None and camera_id is not None:
+            motion_camera_id = camera_id_to_motion_camera_id(camera_id)
+
+        if motion_camera_id is not None:
+            return f'/{motion_camera_id}/mjpg/stream'
+
+    return '/'
+
+
 def has_h264_omx_support():
     binary, version, codecs = mediafiles.find_ffmpeg()
     if not binary:
