@@ -850,7 +850,9 @@ def main_ui_to_dict(ui):
     webcontrol_username = ui.get('webcontrol_username')
     webcontrol_password = ui.get('webcontrol_password')
     if webcontrol_username is not None or webcontrol_password is not None:
-        prev_authentication = (get_main().get('webcontrol_authentication') or '').split(':', 1)
+        prev_authentication = (get_main().get('webcontrol_authentication') or '').split(
+            ':', 1
+        )
         prev_username = prev_authentication[0]
         prev_password = prev_authentication[1] if len(prev_authentication) > 1 else ''
 
@@ -901,13 +903,19 @@ def main_dict_to_ui(data):
     else:
         ui['normal_password'] = ''
 
-    ui['webcontrol_port'] = int(data.get('webcontrol_port', settings.MOTION_CONTROL_PORT))
+    ui['webcontrol_port'] = int(
+        data.get('webcontrol_port', settings.MOTION_CONTROL_PORT)
+    )
     ui['webcontrol_auth_method'] = data.get('webcontrol_auth_method', 'none')
 
-    webcontrol_authentication = (data.get('webcontrol_authentication') or '').split(':', 1)
+    webcontrol_authentication = (data.get('webcontrol_authentication') or '').split(
+        ':', 1
+    )
     ui['webcontrol_username'] = webcontrol_authentication[0]
     ui['webcontrol_password'] = (
-        '*****' if len(webcontrol_authentication) > 1 and webcontrol_authentication[1] else ''
+        '*****'
+        if len(webcontrol_authentication) > 1 and webcontrol_authentication[1]
+        else ''
     )
 
     # additional configs
@@ -1052,7 +1060,6 @@ def motion_camera_ui_to_dict(ui, prev_config=None):
         'on_movie_end': '',
         'on_picture_save': '',
     }
-
 
     if utils.is_v4l2_camera(prev_config):
         proto = 'v4l2'
@@ -1584,7 +1591,6 @@ def motion_camera_dict_to_ui(data):  # noqa: C901
         'sunday_from': '',
         'sunday_to': '',
     }
-
 
     if utils.is_net_camera(data):
         ui['device_url'] = data['netcam_url']

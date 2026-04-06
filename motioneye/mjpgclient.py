@@ -233,9 +233,7 @@ class MjpgClient(IOStream):
             logging.debug('mjpg client using basic authentication')
 
             auth_header = utils.build_basic_header(self._username, self._password)
-            w_data = (
-                f'GET {self._stream_path} HTTP/1.0\r\nAuthorization: {auth_header}\r\n\r\n'.encode()
-            )
+            w_data = f'GET {self._stream_path} HTTP/1.0\r\nAuthorization: {auth_header}\r\n\r\n'.encode()
             w_future = utils.cast_future(self.write(w_data))
             w_future.add_done_callback(self._seek_http)
 
@@ -252,11 +250,13 @@ class MjpgClient(IOStream):
             self._auth_digest_state = parts_dict
 
             auth_header = utils.build_digest_header(
-                'GET', self._stream_path, self._username, self._password, self._auth_digest_state
+                'GET',
+                self._stream_path,
+                self._username,
+                self._password,
+                self._auth_digest_state,
             )
-            w_data = (
-                f'GET {self._stream_path} HTTP/1.0\r\nAuthorization: {auth_header}\r\n\r\n'.encode()
-            )
+            w_data = f'GET {self._stream_path} HTTP/1.0\r\nAuthorization: {auth_header}\r\n\r\n'.encode()
             w_future = utils.cast_future(self.write(w_data))
             w_future.add_done_callback(self._seek_http)
 
