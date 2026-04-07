@@ -90,10 +90,8 @@ _USED_MOTION_OPTIONS = {
     'movie_passthrough',
     'minimum_motion_frames',
     'mmalcam_name',
-    'netcam_keepalive',
-    'netcam_tolerant_check',
+    'netcam_params',
     'netcam_url',
-    'netcam_use_tcp',
     'netcam_userpass',
     'noise_level',
     'noise_tune',
@@ -126,143 +124,14 @@ _USED_MOTION_OPTIONS = {
     'threshold',
     'threshold_maximum',
     'threshold_tune',
-    'videodevice',
-    'vid_control_params',
+    'video_device',
+    'video_params',
     'webcontrol_interface',
     'webcontrol_localhost',
     'webcontrol_parms',
     'webcontrol_port',
     'width',
 }
-
-
-def text_double(v, data):
-    return {'text_scale': [1, 2][v]}
-
-
-def webcontrol_html_output(v, data):
-    return {'webcontrol_interface': int(v)}
-
-
-def text_scale(v, data):
-    return {'text_double': True if int(v) > 1 else False}
-
-
-def webcontrol_interface(v, data):
-    return {'webcontrol_html_output': bool(v)}
-
-
-_MOTION_41_TO_43_OPTIONS_MAPPING = {
-    'ffmpeg_video_codec': 'movie_codec',
-    'ffmpeg_output_movies': 'movie_output',
-    'ffmpeg_output_debug_movies': 'movie_output_motion',
-    'ffmpeg_variable_bitrate': 'movie_quality',
-    'lightswitch': 'lightswitch_percent',
-    'max_movie_time': 'movie_max_time',
-    'output_pictures': 'picture_output',
-    'output_debug_pictures': 'picture_output_motion',
-    'quality': 'picture_quality',
-    'rtsp_uses_tcp': 'netcam_use_tcp',
-    'text_double': text_double,
-    'webcontrol_html_output': webcontrol_html_output,
-}
-
-
-_MOTION_43_TO_41_OPTIONS_MAPPING = {
-    'movie_codec': 'ffmpeg_video_codec',
-    'movie_output': 'ffmpeg_output_movies',
-    'movie_output_motion': 'ffmpeg_output_debug_movies',
-    'movie_quality': 'ffmpeg_variable_bitrate',
-    'lightswitch_percent': 'lightswitch',
-    'movie_max_time': 'max_movie_time',
-    'picture_output': 'output_pictures',
-    'picture_output_motion': 'output_debug_pictures',
-    'picture_quality': 'quality',
-    'netcam_use_tcp': 'rtsp_uses_tcp',
-    'text_scale': text_scale,
-    'webcontrol_interface': webcontrol_interface,
-    # motion pre-v4.1
-    'webcontrol_parms': None,
-}
-
-
-def netcam_keepalive_params(v, data):
-    # value can be 'force' as well
-    v = 'on' if v == True else 'off' if v == False else v
-
-    if 'netcam_params' in data and data['netcam_params']:
-        return {'netcam_params': data['netcam_params'] + ',keepalive = ' + v}
-
-    return {'netcam_params': 'keepalive = ' + v}
-
-
-def netcam_tolerant_check_params(v, data):
-    v = 'on' if v else 'off'
-
-    if 'netcam_params' in data and data['netcam_params']:
-        return {'netcam_params': data['netcam_params'] + ',tolerant_check = ' + v}
-
-    return {'netcam_params': 'tolerant_check = ' + v}
-
-
-def netcam_use_tcp_params(v, data):
-    v = 'tcp' if v else 'udp'
-
-    if 'netcam_params' in data and data['netcam_params']:
-        return {'netcam_params': data['netcam_params'] + ',rtsp_transport = ' + v}
-
-    return {'netcam_params': 'rtsp_transport = ' + v}
-
-
-def netcam_params(v, data):
-    params = {}
-    for param in v.split(','):
-        param = [x.strip() for x in param.split('=')]
-        if param[0] == 'keepalive':
-            params['netcam_keepalive'] = param[1]
-
-        elif param[0] == 'tolerant_check':
-            params['netcam_tolerant_check'] = param[1]
-
-        elif param[0] == 'rtsp_transport':
-            if param[1] == 'udp':
-                params['netcam_use_tcp'] = False
-
-            else:
-                params['netcam_use_tcp'] = True
-
-    return params
-
-
-_MOTION_43_TO_44_OPTIONS_MAPPING = {
-    'netcam_keepalive': netcam_keepalive_params,
-    'netcam_tolerant_check': netcam_tolerant_check_params,
-    'netcam_use_tcp': netcam_use_tcp_params,
-    'vid_control_params': 'video_params',
-    'videodevice': 'video_device',
-}
-
-
-_MOTION_44_TO_43_OPTIONS_MAPPING = {
-    'netcam_params': netcam_params,
-    'video_params': 'vid_control_params',
-    'video_device': 'videodevice',
-}
-
-
-def adapt_config_directives(data, mapping):
-    for name in list(data.keys()):
-        mapped = mapping.get(name)
-        if mapped is None:
-            continue
-
-        value = data.pop(name)
-
-        if callable(mapped):
-            data.update(mapped(value, data))
-
-        else:  # assuming simple new name
-            data[mapped] = value
 
 
 def additional_section(func):
@@ -339,10 +208,6 @@ def get_main(as_lines=False):
         ],
     )
 
-    # adapt directives for motion versions < 4.2 and > 4.3
-    adapt_config_directives(main_config, _MOTION_41_TO_43_OPTIONS_MAPPING)
-    adapt_config_directives(main_config, _MOTION_44_TO_43_OPTIONS_MAPPING)
-
     _get_additional_config(main_config)
     _set_default_motion(main_config)
 
@@ -361,13 +226,6 @@ def set_main(main_config):
 
     main_config = dict(main_config)
     _set_additional_config(main_config)
-
-    # adapt directives for motion versions < 4.2 and > 4.3
-    if motionctl.is_motion_pre42():
-        adapt_config_directives(main_config, _MOTION_43_TO_41_OPTIONS_MAPPING)
-
-    elif motionctl.is_motion_post43():
-        adapt_config_directives(main_config, _MOTION_43_TO_44_OPTIONS_MAPPING)
 
     config_file_path = os.path.join(settings.CONF_PATH, _MAIN_CONFIG_FILE_NAME)
 
@@ -554,10 +412,6 @@ def get_camera(camera_id, as_lines=False):
         )
         camera_config['@id'] = camera_id
 
-        # adapt directives for motion versions < 4.2 and > 4.3
-        adapt_config_directives(camera_config, _MOTION_41_TO_43_OPTIONS_MAPPING)
-        adapt_config_directives(camera_config, _MOTION_44_TO_43_OPTIONS_MAPPING)
-
         _get_additional_config(camera_config, camera_id=camera_id)
 
         _set_default_motion_camera(camera_id, camera_config)
@@ -589,13 +443,6 @@ def set_camera(camera_id, camera_config):
     camera_config = dict(camera_config)
 
     if utils.is_local_motion_camera(camera_config):
-        # adapt directives for motion versions < 4.2 and > 4.3
-        if motionctl.is_motion_pre42():
-            adapt_config_directives(camera_config, _MOTION_43_TO_41_OPTIONS_MAPPING)
-
-        elif motionctl.is_motion_post43():
-            adapt_config_directives(camera_config, _MOTION_43_TO_44_OPTIONS_MAPPING)
-
         # set the enabled status in main config
         main_config = get_main()
         cameras = main_config.setdefault('camera', [])
@@ -690,7 +537,7 @@ def add_camera(device_details):
                 camera_config['height'] = h
                 break
 
-        camera_config['videodevice'] = device_details['path']
+        camera_config['video_device'] = device_details['path']
 
     elif proto == 'motioneye':
         camera_config['@proto'] = 'motioneye'
@@ -731,11 +578,14 @@ def add_camera(device_details):
 
             camera_config['netcam_userpass'] = userpass
 
-        camera_config['netcam_keepalive'] = device_details.get('keep_alive', False)
-        camera_config['netcam_tolerant_check'] = True
-
+        keep_alive = device_details.get('keep_alive', False)
+        netcam_params_parts = [
+            'keepalive = ' + ('on' if keep_alive else 'off'),
+            'tolerant_check = on',
+        ]
         if device_details.get('camera_index') == 'udp':
-            camera_config['netcam_use_tcp'] = False
+            netcam_params_parts.append('rtsp_transport = udp')
+        camera_config['netcam_params'] = ','.join(netcam_params_parts)
 
         if match(r'^rtsp|^rtmp', camera_config['netcam_url']):
             camera_config['width'] = 640
@@ -1054,7 +904,7 @@ def motion_camera_ui_to_dict(ui, prev_config=None):
         proto = 'netcam'
 
     if proto in ('v4l2', 'mmal'):
-        # leave videodevice unchanged
+        # leave video_device unchanged
 
         # resolution
         if not ui['resolution']:
@@ -1069,11 +919,11 @@ def motion_camera_ui_to_dict(ui, prev_config=None):
 
         if proto == 'v4l2':
             # video controls
-            vid_control_params = (
+            video_params = (
                 ('{}={}'.format(n, c['value']))
                 for n, c in list(ui['video_controls'].items())
             )
-            data['vid_control_params'] = ','.join(vid_control_params)
+            data['video_params'] = ','.join(video_params)
 
     else:  # assuming netcam
         if match(
@@ -1618,26 +1468,26 @@ def motion_camera_dict_to_ui(data):  # noqa: C901
         threshold = data['threshold'] * 100.0 / (data['width'] * data['height'])
 
     else:  # assuming v4l2
-        ui['device_url'] = data['videodevice']
+        ui['device_url'] = data['video_device']
         ui['proto'] = 'v4l2'
 
         # resolutions
-        resolutions = v4l2ctl.list_resolutions(data['videodevice'])
+        resolutions = v4l2ctl.list_resolutions(data['video_device'])
         ui['available_resolutions'] = [
             (str(w) + 'x' + str(h)) for (w, h) in resolutions
         ]
         ui['resolution'] = str(data['width']) + 'x' + str(data['height'])
 
-        video_controls = v4l2ctl.list_ctrls(data['videodevice'])
+        video_controls = v4l2ctl.list_ctrls(data['video_device'])
         video_controls = [
             (n, c)
             for (n, c) in list(video_controls.items())
             if 'min' in c and 'max' in c and 'value' in c
         ]
 
-        vid_control_params = data['vid_control_params'].split(',')
+        video_params = data['video_params'].split(',')
         vid_control_values = {}
-        for param in vid_control_params:
+        for param in video_params:
             parts = param.split('=')
             if len(parts) == 1:
                 name, value = param, 1
@@ -2346,8 +2196,8 @@ def _set_default_motion_camera(camera_id, data):
     data.setdefault('@admin_only', False)
 
     if utils.is_v4l2_camera(data):
-        data.setdefault('videodevice', '/dev/video0')
-        data.setdefault('vid_control_params', '')
+        data.setdefault('video_device', '/dev/video0')
+        data.setdefault('video_params', '')
         data.setdefault('width', 352)
         data.setdefault('height', 288)
 

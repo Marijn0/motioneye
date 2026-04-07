@@ -76,13 +76,20 @@ adjust_directive "output_pictures" "picture_output"
 adjust_directive "output_debug_pictures" "picture_output_motion"
 adjust_directive "quality" "picture_quality"
 adjust_directive "process_id_file" "pid_file"
-adjust_directive "rtsp_uses_tcp" "netcam_use_tcp"
+
+# 4.2/4.3 -> 4.4
+adjust_directive "rtsp_uses_tcp\s+on" "netcam_params rtsp_transport = tcp"
+adjust_directive "rtsp_uses_tcp\s+off" "netcam_params rtsp_transport = udp"
+adjust_directive "netcam_use_tcp\s+on" "netcam_params rtsp_transport = tcp"
+adjust_directive "netcam_use_tcp\s+off" "netcam_params rtsp_transport = udp"
 adjust_directive "text_double\s+on" "text_scale 2"
 adjust_directive "text_double\s+off" "text_scale 1"
 adjust_directive "webcontrol_html_output\s+on" "webcontrol_interface 1"
 adjust_directive "webcontrol_html_output\s+off" "webcontrol_interface 0"
+adjust_directive "videodevice" "video_device"
+adjust_directive "vid_control_params" "video_params"
 
-# these video controls have been removed and replaced by vid_control_params directive
+# these video controls have been removed and replaced by video_params directive
 # user will have to reconfigure them from scratch
 remove_directive "brightness"
 remove_directive "contrast"

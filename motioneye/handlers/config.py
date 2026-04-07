@@ -451,7 +451,7 @@ class ConfigHandler(BaseHandler):
             for camera_id in config.get_camera_ids():
                 data = config.get_camera(camera_id)
                 if utils.is_v4l2_camera(data):
-                    configured_devices.add(data['videodevice'])
+                    configured_devices.add(data['video_device'])
 
             cameras = [
                 {'id': d[1], 'name': d[2]}

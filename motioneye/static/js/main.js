@@ -2034,7 +2034,7 @@ function cameraUi2Dict() {
         'streaming_resolution': $('#streamingResolutionSlider').val(),
         'streaming_server_resize': $('#streamingServerResizeSwitch')[0].checked,
         'streaming_port': $('#streamingPortEntry').val(),
-        'streaming_auth_mode': $('#streamingAuthModeSelect').val() || 'disabled', /* compatibility with old motion */
+        'streaming_auth_mode': $('#streamingAuthModeSelect').val() || 'disabled',
         'streaming_username': $('#streamingUsernameEntry').val(),
         'streaming_motion': $('#streamingMotion')[0].checked,
 

@@ -351,22 +351,6 @@ def motion_camera_id_to_camera_id(motion_camera_id):
         return None
 
 
-def is_motion_pre42():
-    binary, version = find_motion()
-    if not binary:
-        return False
-
-    return update.compare_versions(version, '4.2') < 0
-
-
-def is_motion_post43():
-    binary, version = find_motion()
-    if not binary:
-        return False
-
-    return update.compare_versions(version, '4.4') >= 0  # 4.3.2 > 4.3
-
-
 def has_h264_omx_support():
     binary, version, codecs = mediafiles.find_ffmpeg()
     if not binary:
