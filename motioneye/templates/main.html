@@ -90,7 +90,6 @@
         // Pass variables to JavaScript
         var adminUsername = '{{admin_username}}';
         var frame = {% if frame %}true{% else %}false{% endif %};
-        var isMotion5 = {% if is_motion5 %}true{% else %}false{% endif %};
         var hasLocalCamSupport = {% if has_motion %}true{% else %}false{% endif %};
         var hasNetCamSupport = {% if has_motion %}true{% else %}false{% endif %};
         {% if mask_width %}var maskWidth = {{mask_width}};{% endif %}
@@ -707,7 +706,7 @@
                             <td class="settings-item-label"><span class="settings-item-label">{{ _("Aŭtentiga reĝimo") }}</span></td>
                             <td class="settings-item-value">
                                 <select class="styled streaming camera-config" id="streamingAuthModeSelect">
-                                    <option value="disabled">{{ _("Malebligita") }}</option>
+                                    <option value="none">{{ _("Malebligita") }}</option>
                                     <option value="basic">Basic</option>
                                     <option value="digest">Digest</option>
                                 </select>

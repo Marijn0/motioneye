@@ -69,7 +69,7 @@ class MoviePlaybackHandler(StaticFileHandler, BaseHandler):
         if utils.is_local_motion_camera(camera_config):
             filename = mediafiles.get_media_path(camera_config, filename, 'movie')
             self.pretty_filename = (
-                camera_config['camera_name'] + '_' + self.pretty_filename
+                config.get_camera_name(camera_config) + '_' + self.pretty_filename
             )
             await StaticFileHandler.get(self, filename, include_body=include_body)
             return

@@ -38,7 +38,6 @@ class MainHandler(BaseHandler):
             'main.html',
             frame=False,
             motion_version=motion_info[1] if motion_info else '(none)',
-            is_motion5=motionctl.is_motion5(),
             os_version=' '.join(os_version),
             enable_update=settings.ENABLE_UPDATE,
             enable_reboot=settings.ENABLE_REBOOT,

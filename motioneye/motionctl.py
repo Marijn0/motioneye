@@ -26,7 +26,7 @@ from shlex import quote
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.ioloop import IOLoop
 
-from motioneye import mediafiles, settings, update, utils
+from motioneye import mediafiles, settings, utils
 from motioneye.controls.powerctl import PowerControl
 
 _MOTION_CONTROL_TIMEOUT = 5
@@ -86,11 +86,6 @@ def motion_major_version():
     return int(match.group(1))
 
 
-def is_motion5():
-    major_version = motion_major_version()
-    return major_version is not None and major_version >= 5
-
-
 def get_webcontrol_port():
     from motioneye import config
 
@@ -118,6 +113,11 @@ def start(deferred=False):
     binary, version = find_motion()
     if not binary:
         raise Exception('motion executable could not be found')
+    major_version = motion_major_version()
+    if major_version is not None and major_version < 5:
+        raise Exception(
+            f'motionEye requires Motion 5 or newer, found Motion {version}'
+        )
 
     logging.debug(f'starting motion executable "{binary}" version "{version}"')
 

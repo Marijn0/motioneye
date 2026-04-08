@@ -215,7 +215,7 @@ class PictureHandler(BaseHandler):
                 self.finish_json({'error': 'Failed to get movies list.'})
 
             return self.finish_json(
-                {'mediaList': media_list, 'cameraName': camera_config['camera_name']}
+                {'mediaList': media_list, 'cameraName': config.get_camera_name(camera_config)}
             )
 
         elif utils.is_remote_camera(camera_config):
@@ -251,7 +251,7 @@ class PictureHandler(BaseHandler):
                 frame=True,
                 camera_id=camera_id,
                 camera_config=camera_config,
-                title=self.get_argument('title', camera_config.get('camera_name', '')),
+                title=self.get_argument('title', config.get_camera_name(camera_config)),
                 admin_username=config.get_main().get('@admin_username'),
                 static_path='../../../static/',
             )
@@ -281,7 +281,7 @@ class PictureHandler(BaseHandler):
                 frame=True,
                 camera_id=camera_id,
                 camera_config=remote_config,
-                title=self.get_argument('title', remote_config['camera_name']),
+                title=self.get_argument('title', config.get_camera_name(remote_config)),
                 admin_username=config.get_main().get('@admin_username'),
             )
 
@@ -298,7 +298,7 @@ class PictureHandler(BaseHandler):
             content = mediafiles.get_media_content(camera_config, filename, 'picture')
 
             pretty_filename = (
-                camera_config['camera_name'] + '_' + os.path.basename(filename)
+                config.get_camera_name(camera_config) + '_' + os.path.basename(filename)
             )
             self.set_header('Content-Type', 'image/jpeg')
             self.set_header(
@@ -441,7 +441,7 @@ class PictureHandler(BaseHandler):
 
                     raise HTTPError(404, 'no such key')
 
-                pretty_filename = camera_config['camera_name'] + '_' + group
+                pretty_filename = config.get_camera_name(camera_config) + '_' + group
                 pretty_filename = re.sub('[^a-zA-Z0-9]', '_', pretty_filename)
 
                 self.set_header('Content-Type', 'application/zip')
@@ -537,10 +537,10 @@ class PictureHandler(BaseHandler):
 
                     raise HTTPError(404, 'no such key')
 
-                pretty_filename = camera_config['camera_name'] + '_' + group
+                pretty_filename = config.get_camera_name(camera_config) + '_' + group
                 pretty_filename = re.sub('[^a-zA-Z0-9]', '_', pretty_filename)
                 filename_ext = mediafiles.FFMPEG_EXT_MAPPING.get(
-                    camera_config['movie_codec'], 'avi'
+                    camera_config['movie_container'], 'avi'
                 )
                 pretty_filename += '.' + filename_ext
 

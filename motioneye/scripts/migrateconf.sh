@@ -39,10 +39,10 @@ function remove_directive() {
 }
 
 
-# 3.x -> 4.2
-adjust_directive "control_authentication" "webcontrol_authentication"
-adjust_directive "control_html_output\s+on" "webcontrol_interface 1"
-adjust_directive "control_html_output\s+off" "webcontrol_interface 0"
+# 3.x -> Motion 5
+adjust_directive "control_authentication" "webcontrol_auth_admin"
+adjust_directive "control_html_output\s+on" "webcontrol_interface default"
+adjust_directive "control_html_output\s+off" "webcontrol_interface default"
 adjust_directive "control_localhost" "webcontrol_localhost"
 adjust_directive "control_port" "webcontrol_port"
 adjust_directive "gap" "event_gap"
@@ -54,14 +54,14 @@ adjust_directive "output_normal" "picture_output"
 adjust_directive "output_motion" "picture_output_motion"
 adjust_directive "thread\s+thread-" "camera camera-"
 adjust_directive "#thread\s+thread-" "#camera camera-"
-adjust_directive "webcam_localhost" "stream_localhost"
+adjust_directive "webcam_localhost" "webcontrol_localhost"
 adjust_directive "webcam_maxrate" "stream_maxrate"
 adjust_directive "webcam_motion" "stream_motion"
-adjust_directive "webcam_port" "stream_port"
+adjust_directive "webcam_port" "webcontrol_port"
 adjust_directive "webcam_quality" "stream_quality"
 
-# 4.0/4.1 -> 4.2
-adjust_directive "# @name" "camera_name"
+# 4.0/4.1 -> Motion 5
+adjust_directive "# @name" "device_name"
 adjust_directive "extpipe" "movie_extpipe"
 adjust_directive "exif" "picture_exif"
 adjust_directive "ffmpeg_bps" "movie_bps"
@@ -69,7 +69,7 @@ adjust_directive "ffmpeg_duplicate_frames" "movie_duplicate_frames"
 adjust_directive "ffmpeg_output_movies" "movie_output"
 adjust_directive "ffmpeg_output_debug_movies" "movie_output_motion"
 adjust_directive "ffmpeg_variable_bitrate" "movie_quality"
-adjust_directive "ffmpeg_video_codec" "movie_codec"
+adjust_directive "ffmpeg_video_codec" "movie_container"
 adjust_directive "lightswitch" "lightswitch_percent"
 adjust_directive "max_movie_time" "movie_max_time"
 adjust_directive "output_pictures" "picture_output"
@@ -84,8 +84,8 @@ adjust_directive "netcam_use_tcp\s+on" "netcam_params rtsp_transport = tcp"
 adjust_directive "netcam_use_tcp\s+off" "netcam_params rtsp_transport = udp"
 adjust_directive "text_double\s+on" "text_scale 2"
 adjust_directive "text_double\s+off" "text_scale 1"
-adjust_directive "webcontrol_html_output\s+on" "webcontrol_interface 1"
-adjust_directive "webcontrol_html_output\s+off" "webcontrol_interface 0"
+adjust_directive "webcontrol_html_output\s+on" "webcontrol_interface default"
+adjust_directive "webcontrol_html_output\s+off" "webcontrol_interface default"
 adjust_directive "videodevice" "video_device"
 adjust_directive "vid_control_params" "video_params"
 

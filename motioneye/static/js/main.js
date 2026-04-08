@@ -1038,7 +1038,7 @@ function initUI() {
 }
 
 function addVideoControl(name, min, max, step) {
-    var prevTr = $('#autoBrightnessSwitch').parent().parent();
+    var prevTr = $('#framerateSlider').parent().parent();
     var controlTr = $('\
         <tr class="settings-item video-control"> \
             <td class="settings-item-label"><span class="settings-item-label"></span></td> \
@@ -1960,7 +1960,6 @@ function cameraUi2Dict() {
         'proto': $('#deviceTypeEntry')[0].proto,
 
         /* video device */
-        'auto_brightness': $('#autoBrightnessSwitch')[0].checked,
         'rotation': $('#rotationSelect').val(),
         'framerate': $('#framerateSlider').val(),
         'privacy_mask': $('#privacyMaskSwitch')[0].checked,
@@ -2035,7 +2034,7 @@ function cameraUi2Dict() {
         'streaming_resolution': $('#streamingResolutionSlider').val(),
         'streaming_server_resize': $('#streamingServerResizeSwitch')[0].checked,
         'streaming_port': $('#streamingPortEntry').val(),
-        'streaming_auth_mode': $('#streamingAuthModeSelect').val() || 'disabled',
+        'streaming_auth_mode': $('#streamingAuthModeSelect').val() || 'none',
         'streaming_username': $('#streamingUsernameEntry').val(),
         'streaming_motion': $('#streamingMotion')[0].checked,
 
@@ -2266,7 +2265,7 @@ function dict2CameraUi(dict) {
     $('#deviceTypeEntry').val(prettyType); markHideIfNull(!prettyType, 'deviceTypeEntry');
     $('#deviceTypeEntry')[0].proto = dict['proto'];
     $('#adminOnlySwitch')[0].checked = dict['admin_only']; markHideIfNull('admin_only', 'adminOnlySwitch');
-    $('#autoBrightnessSwitch')[0].checked = dict['auto_brightness']; markHideIfNull('auto_brightness', 'autoBrightnessSwitch');
+    markHideIfNull(true, 'autoBrightnessSwitch');
 
     $('#resolutionSelect').html('');
     if (dict['available_resolutions']) {
@@ -2400,7 +2399,7 @@ function dict2CameraUi(dict) {
     else {
         snapshotUrl = cameraUrl + 'current/';
         mjpgUrl = location.protocol + '//' + location.host.split(':')[0] + ':' + dict.streaming_port;
-        if (isMotion5 && dict.motion_camera_id) {
+        if (dict.motion_camera_id) {
             mjpgUrl += '/' + dict.motion_camera_id + '/mjpg/stream';
         }
         embedUrl = cameraUrl + 'frame/';
@@ -3521,7 +3520,7 @@ function pushMainConfig(reboot) {
     }
 
     var mainConfig = mainUi2Dict();
-    if (isMotion5 && pushConfigs.main) {
+    if (pushConfigs.main) {
         if (pushConfigs.main.webcontrol_port != null) {
             mainConfig.webcontrol_port = pushConfigs.main.webcontrol_port;
         }
@@ -3551,7 +3550,7 @@ function pushCameraConfig(reboot, changedField) {
     }
 
     var cameraConfig = cameraUi2Dict();
-    if (isMotion5) {
+    if (cameraConfig.proto == 'v4l2' || cameraConfig.proto == 'netcam' || cameraConfig.proto == 'libcamera') {
         var mainConfig = pushConfigs.main;
         if (mainConfig && mainConfig.webcontrol_port != null) {
             cameraConfig.streaming_port = mainConfig.webcontrol_port;
@@ -3560,14 +3559,7 @@ function pushCameraConfig(reboot, changedField) {
             cameraConfig.video_streaming = !mainConfig.webcontrol_localhost;
         }
         if (mainConfig && mainConfig.webcontrol_auth_method != null) {
-            cameraConfig.streaming_auth_mode = {
-                0: 'disabled',
-                1: 'basic',
-                2: 'digest',
-                'none': 'disabled',
-                'basic': 'basic',
-                'digest': 'digest'
-            }[mainConfig.webcontrol_auth_method] || 'disabled';
+            cameraConfig.streaming_auth_mode = mainConfig.webcontrol_auth_method || 'none';
         }
 
         if (changedField == 'streamingPortEntry') {
@@ -3582,11 +3574,7 @@ function pushCameraConfig(reboot, changedField) {
         }
         if (changedField == 'streamingAuthModeSelect') {
             mainConfig = mainConfig || mainUi2Dict();
-            mainConfig.webcontrol_auth_method = {
-                'disabled': 'none',
-                'basic': 'basic',
-                'digest': 'digest'
-            }[cameraConfig.streaming_auth_mode] || 'none';
+            mainConfig.webcontrol_auth_method = cameraConfig.streaming_auth_mode || 'none';
             pushConfigs.main = mainConfig;
         }
     }

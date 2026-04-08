@@ -668,7 +668,7 @@ class ConfigHandler(BaseHandler):
                     subject = sendmail.subjects['motion_start']
                     message = sendmail.messages['motion_start']
                     format_dict = {
-                        'camera': camera_config['camera_name'],
+                        'camera': config.get_camera_name(camera_config),
                         'hostname': socket.gethostname(),
                         'moment': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                     }

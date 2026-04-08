@@ -660,12 +660,12 @@ def make_timelapse_movie(camera_config, framerate, interval, group: str):
     global _timelapse_data
 
     target_dir = camera_config.get('target_dir')
-    # save movie_codec as a different variable so it doesn't get lost in the CODEC_MAPPING
-    movie_codec = camera_config.get('movie_codec')
+    # Save movie_container separately so it doesn't get lost in the codec mappings.
+    movie_container = camera_config.get('movie_container')
 
-    codec = FFMPEG_CODEC_MAPPING.get(movie_codec, movie_codec)
-    fmt = FFMPEG_FORMAT_MAPPING.get(movie_codec, movie_codec)
-    file_format = FFMPEG_EXT_MAPPING.get(movie_codec, movie_codec)
+    codec = FFMPEG_CODEC_MAPPING.get(movie_container, movie_container)
+    fmt = FFMPEG_FORMAT_MAPPING.get(movie_container, movie_container)
+    file_format = FFMPEG_EXT_MAPPING.get(movie_container, movie_container)
 
     logging.debug('starting picture listing subprocess...')
 
@@ -682,7 +682,7 @@ def make_timelapse_movie(camera_config, framerate, interval, group: str):
     started = [datetime.datetime.now()]
     media_list = []
 
-    # use correct extension for the movie_codec
+    # Use the correct extension for the selected movie container.
     tmp_filename = os.path.join(settings.MEDIA_PATH, f'.{int(time())}.{file_format}')
 
     def read_media_list():

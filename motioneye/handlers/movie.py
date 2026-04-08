@@ -114,7 +114,7 @@ class MovieHandler(BaseHandler):
                 self.finish_json({'error': 'Failed to get movies list.'})
 
             return self.finish_json(
-                {'mediaList': media_list, 'cameraName': camera_config['camera_name']}
+                {'mediaList': media_list, 'cameraName': config.get_camera_name(camera_config)}
             )
 
         elif utils.is_remote_camera(camera_config):

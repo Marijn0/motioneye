@@ -367,7 +367,15 @@ def get_jpg(camera_id):
             password = parts[1] if len(parts) > 1 else ''
             auth_mode = streaming_auth_mode
 
-        stream_path = get_stream_path(camera_id)
+        motion_camera_id = motionctl.camera_id_to_motion_camera_id(camera_id)
+        if motion_camera_id is None:
+            logging.error(
+                f'could not start mjpg client for camera id {camera_id}: missing motion camera id'
+            )
+
+            return None
+
+        stream_path = f'/{motion_camera_id}/mjpg/stream'
         client = MjpgClient(camera_id, port, stream_path, username, password, auth_mode)
         client.do_connect()
 
@@ -437,12 +445,3 @@ def _garbage_collector():
             client.close()
 
             continue
-
-
-def get_stream_path(camera_id):
-    if motionctl.is_motion5():
-        motion_camera_id = motionctl.camera_id_to_motion_camera_id(camera_id)
-        if motion_camera_id is not None:
-            return f'/{motion_camera_id}/mjpg/stream'
-
-    return '/'
