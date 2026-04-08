@@ -115,9 +115,7 @@ def start(deferred=False):
         raise Exception('motion executable could not be found')
     major_version = motion_major_version()
     if major_version is not None and major_version < 5:
-        raise Exception(
-            f'motionEye requires Motion 5 or newer, found Motion {version}'
-        )
+        raise Exception(f'motionEye requires Motion 5 or newer, found Motion {version}')
 
     logging.debug(f'starting motion executable "{binary}" version "{version}"')
 
