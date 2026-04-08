@@ -3521,8 +3521,16 @@ function pushMainConfig(reboot) {
     }
 
     var mainConfig = mainUi2Dict();
-    if (isMotion5 && pushConfigs.main && pushConfigs.main.webcontrol_port != null) {
-        mainConfig.webcontrol_port = pushConfigs.main.webcontrol_port;
+    if (isMotion5 && pushConfigs.main) {
+        if (pushConfigs.main.webcontrol_port != null) {
+            mainConfig.webcontrol_port = pushConfigs.main.webcontrol_port;
+        }
+        if (pushConfigs.main.webcontrol_localhost != null) {
+            mainConfig.webcontrol_localhost = pushConfigs.main.webcontrol_localhost;
+        }
+        if (pushConfigs.main.webcontrol_auth_method != null) {
+            mainConfig.webcontrol_auth_method = pushConfigs.main.webcontrol_auth_method;
+        }
     }
 
     pushConfigReboot = pushConfigReboot || reboot;
@@ -3548,10 +3556,37 @@ function pushCameraConfig(reboot, changedField) {
         if (mainConfig && mainConfig.webcontrol_port != null) {
             cameraConfig.streaming_port = mainConfig.webcontrol_port;
         }
+        if (mainConfig && mainConfig.webcontrol_localhost != null) {
+            cameraConfig.video_streaming = !mainConfig.webcontrol_localhost;
+        }
+        if (mainConfig && mainConfig.webcontrol_auth_method != null) {
+            cameraConfig.streaming_auth_mode = {
+                0: 'disabled',
+                1: 'basic',
+                2: 'digest',
+                'none': 'disabled',
+                'basic': 'basic',
+                'digest': 'digest'
+            }[mainConfig.webcontrol_auth_method] || 'disabled';
+        }
 
         if (changedField == 'streamingPortEntry') {
             mainConfig = mainConfig || mainUi2Dict();
             mainConfig.webcontrol_port = cameraConfig.streaming_port;
+            pushConfigs.main = mainConfig;
+        }
+        if (changedField == 'videoStreamingEnabledSwitch') {
+            mainConfig = mainConfig || mainUi2Dict();
+            mainConfig.webcontrol_localhost = !cameraConfig.video_streaming;
+            pushConfigs.main = mainConfig;
+        }
+        if (changedField == 'streamingAuthModeSelect') {
+            mainConfig = mainConfig || mainUi2Dict();
+            mainConfig.webcontrol_auth_method = {
+                'disabled': 'none',
+                'basic': 'basic',
+                'digest': 'digest'
+            }[cameraConfig.streaming_auth_mode] || 'none';
             pushConfigs.main = mainConfig;
         }
     }

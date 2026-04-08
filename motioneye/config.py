@@ -68,10 +68,32 @@ _additional_config_funcs = []
 _additional_structure_cache = {}
 _monitor_command_cache = {}
 
+_MOTION_4_TO_5_OPTIONS_MAPPING = {
+    'camera_name': 'device_name',
+    'movie_codec': 'movie_container',
+}
+_MOTION_5_TO_4_OPTIONS_MAPPING = {
+    'device_name': 'camera_name',
+    'movie_container': 'movie_codec',
+}
+_STREAMING_AUTH_UI_TO_MOTION4 = {'disabled': 0, 'basic': 1, 'digest': 2}
+_STREAMING_AUTH_UI_TO_MOTION5 = {
+    'disabled': 'none',
+    'basic': 'basic',
+    'digest': 'digest',
+}
+_STREAMING_AUTH_MOTION4_TO_UI = {
+    value: name for (name, value) in list(_STREAMING_AUTH_UI_TO_MOTION4.items())
+}
+_STREAMING_AUTH_MOTION5_TO_UI = {
+    value: name for (name, value) in list(_STREAMING_AUTH_UI_TO_MOTION5.items())
+}
+
 _USED_MOTION_OPTIONS = {
     'auto_brightness',
     'despeckle_filter',
     'camera_name',
+    'device_name',
     'emulate_motion',
     'event_gap',
     'framerate',
@@ -82,6 +104,7 @@ _USED_MOTION_OPTIONS = {
     'mask_file',
     'mask_privacy',
     'movie_codec',
+    'movie_container',
     'movie_filename',
     'movie_max_time',
     'movie_output_motion',
@@ -141,6 +164,85 @@ def additional_section(func):
 
 def additional_config(func):
     _additional_config_funcs.append(func)
+
+
+def adapt_config_directives(data, mapping):
+    for name in list(data.keys()):
+        mapped = mapping.get(name)
+        if mapped is None:
+            continue
+
+        value = data.pop(name)
+
+        if callable(mapped):
+            data.update(mapped(value, data))
+
+        else:
+            data[mapped] = value
+
+    return data
+
+
+def _streaming_auth_value_to_ui(value):
+    if value is None:
+        return 'disabled'
+
+    if isinstance(value, str):
+        value = value.strip().lower()
+
+        if value in _STREAMING_AUTH_MOTION5_TO_UI:
+            return _STREAMING_AUTH_MOTION5_TO_UI[value]
+
+        if value in _STREAMING_AUTH_UI_TO_MOTION4:
+            return value
+
+        try:
+            value = int(value)
+        except ValueError:
+            return 'disabled'
+
+    return _STREAMING_AUTH_MOTION4_TO_UI.get(int(value), 'disabled')
+
+
+def _normalize_webcontrol_interface_value(value):
+    if motionctl.is_motion5():
+        return 'default'
+
+    if isinstance(value, str):
+        value = value.strip().lower()
+        if value == 'default':
+            return 0
+        if value == 'user':
+            return 0
+
+        try:
+            value = int(value)
+        except ValueError:
+            return 0
+
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        return 0
+
+    if value in (0, 1, 2):
+        return value
+
+    return 0
+
+
+def _normalize_movie_quality_value(value):
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        value = 75
+
+    value = max(1, value)
+
+    if motionctl.is_motion5():
+        value = min(90, value)
+
+    return value
 
 
 def get_main(as_lines=False):
@@ -209,6 +311,14 @@ def get_main(as_lines=False):
         ],
     )
 
+    if motionctl.is_motion5():
+        main_config.pop('setup_mode', None)
+
+    if main_config.get('webcontrol_interface') is not None:
+        main_config['webcontrol_interface'] = _normalize_webcontrol_interface_value(
+            main_config.get('webcontrol_interface')
+        )
+
     _get_additional_config(main_config)
     _set_default_motion(main_config)
 
@@ -221,8 +331,19 @@ def set_main(main_config):
     global _main_config_cache
 
     main_config = dict(main_config)
+    if motionctl.is_motion5():
+        main_config.pop('setup_mode', None)
+
     for n, v in list(_main_config_cache.items()):
         main_config.setdefault(n, v)
+
+    if motionctl.is_motion5():
+        main_config.pop('setup_mode', None)
+
+    if main_config.get('webcontrol_interface') is not None:
+        main_config['webcontrol_interface'] = _normalize_webcontrol_interface_value(
+            main_config.get('webcontrol_interface')
+        )
     _main_config_cache = main_config
 
     main_config = dict(main_config)
@@ -401,8 +522,10 @@ def get_camera(camera_id, as_lines=False):
             '@upload_bucket',
             '@upload_sse_c_key',
             'camera_name',
+            'device_name',
         ],
     )
+    adapt_config_directives(camera_config, _MOTION_5_TO_4_OPTIONS_MAPPING)
 
     if utils.is_local_motion_camera(camera_config):
         # determine the enabled status
@@ -438,10 +561,13 @@ def get_camera(camera_id, as_lines=False):
 
 
 def set_camera(camera_id, camera_config):
+    camera_config = adapt_config_directives(
+        collections.OrderedDict(camera_config), _MOTION_5_TO_4_OPTIONS_MAPPING
+    )
     camera_config['@id'] = camera_id
     _camera_config_cache[camera_id] = camera_config
 
-    camera_config = dict(camera_config)
+    camera_config = collections.OrderedDict(camera_config)
 
     if utils.is_local_motion_camera(camera_config):
         # set the enabled status in main config
@@ -475,6 +601,23 @@ def set_camera(camera_id, camera_config):
     else:
         lines = []
 
+    camera_config_to_write = camera_config
+    if utils.is_local_motion_camera(camera_config_to_write):
+        mapping = (
+            _MOTION_4_TO_5_OPTIONS_MAPPING
+            if motionctl.is_motion5()
+            else _MOTION_5_TO_4_OPTIONS_MAPPING
+        )
+        camera_config_to_write = adapt_config_directives(
+            collections.OrderedDict(camera_config_to_write), mapping
+        )
+        if motionctl.is_motion5():
+            camera_config_to_write.pop('auto_brightness', None)
+            camera_config_to_write.pop('stream_localhost', None)
+            camera_config_to_write.pop('stream_port', None)
+            camera_config_to_write.pop('stream_auth_method', None)
+            camera_config_to_write.pop('stream_authentication', None)
+
     # write the configuration to file
     camera_config_path = os.path.join(settings.CONF_PATH, _CAMERA_CONFIG_FILE_NAME) % {
         'id': camera_id
@@ -492,7 +635,7 @@ def set_camera(camera_id, camera_config):
 
         raise
 
-    lines = _dict_to_conf(lines, camera_config)
+    lines = _dict_to_conf(lines, camera_config_to_write)
 
     try:
         f.writelines([utils.make_str(line) + '\n' for line in lines])
@@ -663,6 +806,20 @@ def main_ui_to_dict(ui):
     if ui.get('webcontrol_port') is not None:
         data['webcontrol_port'] = int(ui['webcontrol_port'])
 
+    if ui.get('webcontrol_localhost') is not None:
+        data['webcontrol_localhost'] = bool(ui['webcontrol_localhost'])
+
+    if ui.get('webcontrol_auth_method') is not None:
+        auth_mode = _streaming_auth_value_to_ui(ui['webcontrol_auth_method'])
+        data['webcontrol_auth_method'] = (
+            _STREAMING_AUTH_UI_TO_MOTION5.get(auth_mode, 'none')
+            if motionctl.is_motion5()
+            else _STREAMING_AUTH_UI_TO_MOTION4.get(auth_mode, 0)
+        )
+
+    if ui.get('webcontrol_authentication') is not None:
+        data['webcontrol_authentication'] = ui['webcontrol_authentication']
+
     def call_hook(u, p):
         if settings.PASSWORD_HOOK:
             env = {'MEYE_USERNAME': u, 'MEYE_PASSWORD': p}
@@ -714,6 +871,9 @@ def main_dict_to_ui(data):
     if data.get('webcontrol_port') is not None:
         ui['webcontrol_port'] = int(data['webcontrol_port'])
 
+    if data.get('webcontrol_localhost') is not None:
+        ui['webcontrol_localhost'] = bool(data['webcontrol_localhost'])
+
     if data['@lang']:
         ui['lang'] = data['@lang']
 
@@ -752,8 +912,11 @@ def input_sanity_check(regex, value, key, msg):
 
 
 def motion_camera_ui_to_dict(ui, prev_config=None):
-    prev_config = dict(prev_config or {})
+    prev_config = adapt_config_directives(
+        collections.OrderedDict(prev_config or {}), _MOTION_5_TO_4_OPTIONS_MAPPING
+    )
     main_config = get_main()  # needed for surveillance password
+    streaming_auth_mode = _streaming_auth_value_to_ui(ui['streaming_auth_mode'])
 
     # regex definitions for input sanity checks in backend
     # they must match the ones in motioneye/static/js/main.js
@@ -788,7 +951,6 @@ def motion_camera_ui_to_dict(ui, prev_config=None):
         ),
         '@enabled': ui['enabled'],
         '@admin_only': ui.get('admin_only', False),
-        'auto_brightness': ui['auto_brightness'],
         'framerate': int(ui['framerate']),
         'rotate': int(ui['rotation']),
         'mask_privacy': '',
@@ -821,16 +983,11 @@ def motion_camera_ui_to_dict(ui, prev_config=None):
         'text_right': '',
         'text_scale': ui['text_scale'],
         # streaming
-        'stream_localhost': not ui['video_streaming'],
         'stream_maxrate': int(ui['streaming_framerate']),
         'stream_quality': max(1, int(ui['streaming_quality'])),
         '@webcam_resolution': max(1, int(ui['streaming_resolution'])),
         '@webcam_server_resize': ui['streaming_server_resize'],
         'stream_motion': ui['streaming_motion'],
-        'stream_auth_method': {'disabled': 0, 'basic': 1, 'digest': 2}.get(
-            ui['streaming_auth_mode'], 0
-        ),
-        'stream_authentication': '',
         '@lang': main_config['@lang'],
         # still images
         'picture_output': False,
@@ -878,13 +1035,24 @@ def motion_camera_ui_to_dict(ui, prev_config=None):
         'on_picture_save': '',
     }
 
-    set_camera_streaming_port(prev_config, ui['streaming_port'])
+    if not motionctl.is_motion5():
+        data['auto_brightness'] = ui['auto_brightness']
+    else:
+        prev_config.pop('auto_brightness', None)
 
-    if data.get('stream_auth_method', 0) > 0:
+    set_camera_streaming_localhost(prev_config, not ui['video_streaming'], main_config)
+    set_camera_streaming_port(prev_config, ui['streaming_port'])
+    set_camera_streaming_auth_method(prev_config, streaming_auth_mode, main_config)
+
+    streaming_authentication = ''
+
+    if streaming_auth_mode != 'disabled':
         streaming_username = ui.get('streaming_username')
         streaming_password = ui.get('streaming_password')
 
-        prev_stream_authentication = prev_config.get('stream_authentication')
+        prev_stream_authentication = get_camera_streaming_authentication(
+            prev_config, main_config
+        )
         parts = (prev_stream_authentication or '').split(':', 1)
         prev_stream_username = parts[0]
         prev_stream_password = parts[1] if len(parts) > 1 else ''
@@ -898,9 +1066,13 @@ def motion_camera_ui_to_dict(ui, prev_config=None):
 
         # No hard fail: if still missing, keep stream_authentication empty.
         if streaming_username and streaming_password:
-            data['stream_authentication'] = (
+            streaming_authentication = (
                 str(streaming_username) + ':' + str(streaming_password)
             )
+
+    set_camera_streaming_authentication(
+        prev_config, streaming_authentication, main_config
+    )
 
     if utils.is_v4l2_camera(prev_config):
         proto = 'v4l2'
@@ -1089,7 +1261,7 @@ def motion_camera_ui_to_dict(ui, prev_config=None):
     data['movie_codec'] = ui['movie_format']
     q = int(ui['movie_quality'])
 
-    data['movie_quality'] = max(1, q)
+    data['movie_quality'] = _normalize_movie_quality_value(q)
 
     # motion detection
 
@@ -1315,6 +1487,9 @@ def motion_camera_ui_to_dict(ui, prev_config=None):
 
 
 def motion_camera_dict_to_ui(data):  # noqa: C901
+    data = adapt_config_directives(
+        collections.OrderedDict(data), _MOTION_5_TO_4_OPTIONS_MAPPING
+    )
     ui = {
         # device
         'name': data['camera_name'],
@@ -1322,7 +1497,9 @@ def motion_camera_dict_to_ui(data):  # noqa: C901
         'id': data['@id'],
         'motion_camera_id': motionctl.camera_id_to_motion_camera_id(data['@id']),
         'admin_only': data.get('@admin_only', False),
-        'auto_brightness': data['auto_brightness'],
+        'auto_brightness': (
+            None if motionctl.is_motion5() else data.get('auto_brightness', False)
+        ),
         'framerate': int(data['framerate']),
         'rotation': int(data['rotate']),
         'privacy_mask': False,
@@ -1366,15 +1543,13 @@ def motion_camera_dict_to_ui(data):  # noqa: C901
         'custom_left_text': '',
         'custom_right_text': '',
         # streaming
-        'video_streaming': not data['stream_localhost'],
+        'video_streaming': not get_camera_streaming_localhost(data),
         'streaming_framerate': int(data['stream_maxrate']),
         'streaming_quality': int(data['stream_quality']),
         'streaming_resolution': int(data['@webcam_resolution']),
         'streaming_server_resize': data['@webcam_server_resize'],
         'streaming_port': get_camera_streaming_port(data),
-        'streaming_auth_mode': {0: 'disabled', 1: 'basic', 2: 'digest'}.get(
-            data.get('stream_auth_method'), 'disabled'
-        ),
+        'streaming_auth_mode': get_camera_streaming_auth_mode(data),
         'streaming_username': '',
         'streaming_password': '',
         'streaming_motion': int(data['stream_motion']),
@@ -1438,7 +1613,7 @@ def motion_camera_dict_to_ui(data):  # noqa: C901
         'sunday_to': '',
     }
 
-    stream_authentication = data.get('stream_authentication') or ''
+    stream_authentication = get_camera_streaming_authentication(data)
     if stream_authentication:
         parts = stream_authentication.split(':', 1)
         streaming_username = parts[0]
@@ -1641,7 +1816,7 @@ def motion_camera_dict_to_ui(data):  # noqa: C901
         ui['recording_mode'] = 'motion-triggered'
 
     ui['movie_format'] = data['movie_codec']
-    ui['movie_quality'] = data['movie_quality']
+    ui['movie_quality'] = _normalize_movie_quality_value(data['movie_quality'])
 
     # masks
     if data['mask_file']:
@@ -2195,9 +2370,14 @@ def _set_default_motion(data):
     data.setdefault('@normal_password', '')
     data.setdefault('@lang', 'en')
 
-    data.setdefault('setup_mode', False)
+    if motionctl.is_motion5():
+        data.pop('setup_mode', None)
+    else:
+        data.setdefault('setup_mode', False)
     data.setdefault('webcontrol_port', settings.MOTION_CONTROL_PORT)
-    data.setdefault('webcontrol_interface', 1)
+    data.setdefault(
+        'webcontrol_interface', 'default' if motionctl.is_motion5() else 1
+    )
     data.setdefault('webcontrol_localhost', settings.MOTION_CONTROL_LOCALHOST)
     # the advanced list of parameters will be available
     data.setdefault('webcontrol_parms', 2)
@@ -2220,7 +2400,8 @@ def _set_default_motion_camera(camera_id, data):
         data.setdefault('width', 640)
         data.setdefault('height', 480)
 
-    data.setdefault('auto_brightness', False)
+    if not motionctl.is_motion5():
+        data.setdefault('auto_brightness', False)
     data.setdefault('framerate', 2)
     data.setdefault('rotate', 0)
     data.setdefault('mask_privacy', '')
@@ -2252,10 +2433,11 @@ def _set_default_motion_camera(camera_id, data):
     data.setdefault('@upload_sse_c_key', '')
     data.setdefault('@clean_cloud_enabled', False)
 
-    data.setdefault('stream_localhost', True)
     if motionctl.is_motion5():
+        data.pop('stream_localhost', None)
         data.pop('stream_port', None)
     else:
+        data.setdefault('stream_localhost', True)
         data.setdefault('stream_port', 9080 + camera_id)
     data.setdefault('stream_maxrate', 5)
     data.setdefault('stream_quality', 85)
@@ -2315,7 +2497,9 @@ def _set_default_motion_camera(camera_id, data):
     else:
         data.setdefault('movie_codec', 'mp4')  # will use h264 codec
 
-    data.setdefault('movie_quality', 75)  # 75%
+    data['movie_quality'] = _normalize_movie_quality_value(
+        data.get('movie_quality', 75)
+    )
 
     data.setdefault('@preserve_movies', 0)
     data.setdefault('@manual_record', False)
@@ -2339,6 +2523,40 @@ def get_camera_streaming_port(camera_config, main_config=None):
     return int(camera_config['stream_port'])
 
 
+def get_camera_streaming_localhost(camera_config, main_config=None):
+    if motionctl.is_motion5():
+        if main_config is None:
+            main_config = get_main()
+
+        return bool(
+            main_config.get('webcontrol_localhost', settings.MOTION_CONTROL_LOCALHOST)
+        )
+
+    return bool(camera_config['stream_localhost'])
+
+
+def get_camera_streaming_auth_mode(camera_config, main_config=None):
+    if motionctl.is_motion5():
+        if main_config is None:
+            main_config = get_main()
+
+        auth_method = main_config.get('webcontrol_auth_method', 'none')
+    else:
+        auth_method = camera_config.get('stream_auth_method', 0)
+
+    return _streaming_auth_value_to_ui(auth_method)
+
+
+def get_camera_streaming_authentication(camera_config, main_config=None):
+    if motionctl.is_motion5():
+        if main_config is None:
+            main_config = get_main()
+
+        return main_config.get('webcontrol_authentication') or ''
+
+    return camera_config.get('stream_authentication') or ''
+
+
 def set_camera_streaming_port(camera_config, streaming_port, main_config=None):
     streaming_port = int(streaming_port)
     if motionctl.is_motion5():
@@ -2349,6 +2567,53 @@ def set_camera_streaming_port(camera_config, streaming_port, main_config=None):
 
     else:
         camera_config['stream_port'] = streaming_port
+
+
+def set_camera_streaming_localhost(camera_config, streaming_localhost, main_config=None):
+    streaming_localhost = bool(streaming_localhost)
+    if motionctl.is_motion5():
+        camera_config.pop('stream_localhost', None)
+
+        if main_config is not None:
+            main_config['webcontrol_localhost'] = streaming_localhost
+
+    else:
+        camera_config['stream_localhost'] = streaming_localhost
+
+
+def set_camera_streaming_auth_method(
+    camera_config, streaming_auth_mode, main_config=None
+):
+    streaming_auth_mode = _streaming_auth_value_to_ui(streaming_auth_mode)
+    if motionctl.is_motion5():
+        camera_config.pop('stream_auth_method', None)
+
+        if main_config is not None:
+            main_config['webcontrol_auth_method'] = _STREAMING_AUTH_UI_TO_MOTION5.get(
+                streaming_auth_mode, 'none'
+            )
+
+    else:
+        camera_config['stream_auth_method'] = _STREAMING_AUTH_UI_TO_MOTION4.get(
+            streaming_auth_mode, 0
+        )
+
+
+def set_camera_streaming_authentication(
+    camera_config, streaming_authentication, main_config=None
+):
+    streaming_authentication = streaming_authentication or ''
+    if motionctl.is_motion5():
+        camera_config.pop('stream_authentication', None)
+
+        if main_config is not None:
+            if streaming_authentication:
+                main_config['webcontrol_authentication'] = streaming_authentication
+            else:
+                main_config.pop('webcontrol_authentication', None)
+
+    else:
+        camera_config['stream_authentication'] = streaming_authentication
 
 
 def _set_default_simple_mjpeg_camera(camera_id, data):
