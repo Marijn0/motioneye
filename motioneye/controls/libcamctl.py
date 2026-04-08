@@ -1,5 +1,5 @@
-from logging import debug
 import re
+from logging import debug
 from shutil import which
 from subprocess import CalledProcessError
 
@@ -17,7 +17,9 @@ def list_devices():
         return []
 
     try:
-        output = utils.call_subprocess([binary, '--list-cameras'], stderr=utils.DEV_NULL)
+        output = utils.call_subprocess(
+            [binary, '--list-cameras'], stderr=utils.DEV_NULL
+        )
 
     except CalledProcessError:
         debug('unable to detect libcamera camera: "--list-cameras" failed')

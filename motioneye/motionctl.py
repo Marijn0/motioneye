@@ -315,9 +315,7 @@ async def take_snapshot(camera_id):
 
     logging.debug(f'taking snapshot for camera with id {camera_id}')
 
-    url = (
-        f'http://127.0.0.1:{get_webcontrol_port()}/{motion_camera_id}/action/snapshot'
-    )
+    url = f'http://127.0.0.1:{get_webcontrol_port()}/{motion_camera_id}/action/snapshot'
 
     request = HTTPRequest(
         url,

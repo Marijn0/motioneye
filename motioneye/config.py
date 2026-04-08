@@ -2375,9 +2375,7 @@ def _set_default_motion(data):
     else:
         data.setdefault('setup_mode', False)
     data.setdefault('webcontrol_port', settings.MOTION_CONTROL_PORT)
-    data.setdefault(
-        'webcontrol_interface', 'default' if motionctl.is_motion5() else 1
-    )
+    data.setdefault('webcontrol_interface', 'default' if motionctl.is_motion5() else 1)
     data.setdefault('webcontrol_localhost', settings.MOTION_CONTROL_LOCALHOST)
     # the advanced list of parameters will be available
     data.setdefault('webcontrol_parms', 2)
@@ -2569,7 +2567,9 @@ def set_camera_streaming_port(camera_config, streaming_port, main_config=None):
         camera_config['stream_port'] = streaming_port
 
 
-def set_camera_streaming_localhost(camera_config, streaming_localhost, main_config=None):
+def set_camera_streaming_localhost(
+    camera_config, streaming_localhost, main_config=None
+):
     streaming_localhost = bool(streaming_localhost)
     if motionctl.is_motion5():
         camera_config.pop('stream_localhost', None)

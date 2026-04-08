@@ -350,9 +350,7 @@ def get_jpg(camera_id):
             )
 
         stream_path = get_stream_path(camera_id)
-        client = MjpgClient(
-            camera_id, port, stream_path, username, password, auth_mode
-        )
+        client = MjpgClient(camera_id, port, stream_path, username, password, auth_mode)
         client.do_connect()
 
         MjpgClient.clients[camera_id] = client
