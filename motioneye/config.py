@@ -150,6 +150,9 @@ _USED_MOTION_OPTIONS = {
     'threshold_tune',
     'video_device',
     'video_params',
+    'webcontrol_auth_admin',
+    'webcontrol_authentication',
+    'webcontrol_auth_method',
     'webcontrol_interface',
     'webcontrol_localhost',
     'webcontrol_parms',
@@ -245,6 +248,23 @@ def _normalize_movie_quality_value(value):
     return value
 
 
+def _get_motion5_webcontrol_authentication(main_config):
+    return (
+        main_config.get('webcontrol_auth_admin')
+        or main_config.get('webcontrol_authentication')
+        or ''
+    )
+
+
+def _normalize_motion5_webcontrol_authentication(main_config):
+    if not motionctl.is_motion5():
+        return
+
+    auth = main_config.pop('webcontrol_authentication', None)
+    if 'webcontrol_auth_admin' not in main_config and auth is not None:
+        main_config['webcontrol_auth_admin'] = auth
+
+
 def get_main(as_lines=False):
     global _main_config_cache
 
@@ -313,6 +333,7 @@ def get_main(as_lines=False):
 
     if motionctl.is_motion5():
         main_config.pop('setup_mode', None)
+        _normalize_motion5_webcontrol_authentication(main_config)
 
     if main_config.get('webcontrol_interface') is not None:
         main_config['webcontrol_interface'] = _normalize_webcontrol_interface_value(
@@ -333,12 +354,14 @@ def set_main(main_config):
     main_config = dict(main_config)
     if motionctl.is_motion5():
         main_config.pop('setup_mode', None)
+        _normalize_motion5_webcontrol_authentication(main_config)
 
     for n, v in list(_main_config_cache.items()):
         main_config.setdefault(n, v)
 
     if motionctl.is_motion5():
         main_config.pop('setup_mode', None)
+        _normalize_motion5_webcontrol_authentication(main_config)
 
     if main_config.get('webcontrol_interface') is not None:
         main_config['webcontrol_interface'] = _normalize_webcontrol_interface_value(
@@ -818,7 +841,10 @@ def main_ui_to_dict(ui):
         )
 
     if ui.get('webcontrol_authentication') is not None:
-        data['webcontrol_authentication'] = ui['webcontrol_authentication']
+        if motionctl.is_motion5():
+            data['webcontrol_auth_admin'] = ui['webcontrol_authentication']
+        else:
+            data['webcontrol_authentication'] = ui['webcontrol_authentication']
 
     def call_hook(u, p):
         if settings.PASSWORD_HOOK:
@@ -873,6 +899,14 @@ def main_dict_to_ui(data):
 
     if data.get('webcontrol_localhost') is not None:
         ui['webcontrol_localhost'] = bool(data['webcontrol_localhost'])
+
+    webcontrol_authentication = (
+        _get_motion5_webcontrol_authentication(data)
+        if motionctl.is_motion5()
+        else data.get('webcontrol_authentication')
+    )
+    if webcontrol_authentication is not None:
+        ui['webcontrol_authentication'] = webcontrol_authentication
 
     if data['@lang']:
         ui['lang'] = data['@lang']
@@ -2550,7 +2584,7 @@ def get_camera_streaming_authentication(camera_config, main_config=None):
         if main_config is None:
             main_config = get_main()
 
-        return main_config.get('webcontrol_authentication') or ''
+        return _get_motion5_webcontrol_authentication(main_config)
 
     return camera_config.get('stream_authentication') or ''
 
@@ -2608,8 +2642,10 @@ def set_camera_streaming_authentication(
 
         if main_config is not None:
             if streaming_authentication:
-                main_config['webcontrol_authentication'] = streaming_authentication
+                main_config['webcontrol_auth_admin'] = streaming_authentication
+                main_config.pop('webcontrol_authentication', None)
             else:
+                main_config.pop('webcontrol_auth_admin', None)
                 main_config.pop('webcontrol_authentication', None)
 
     else:
