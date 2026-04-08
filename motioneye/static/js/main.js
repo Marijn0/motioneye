@@ -1965,6 +1965,7 @@ function cameraUi2Dict() {
         'framerate': $('#framerateSlider').val(),
         'privacy_mask': $('#privacyMaskSwitch')[0].checked,
         'privacy_mask_lines': $('#privacyMaskLinesEntry').val() ? $('#privacyMaskLinesEntry').val().split(',').map(function (l) {return parseInt(l);}) : [],
+        'libcam_params': $('#libcamParamsEntry').val(),
         'extra_options': $('#extraOptionsEntry').val().split(new RegExp('(\n)|(\r\n)|(\n\r)')).map(function (o) {
             if (!o) {
                 return null;
@@ -2245,8 +2246,8 @@ function dict2CameraUi(dict) {
             prettyType = 'Network Camera';
             break;
 
-        case 'mmal':
-            prettyType = 'MMAL Camera';
+        case 'libcamera':
+            prettyType = 'libcamera Camera';
             break;
 
         case 'motioneye':
@@ -2284,6 +2285,7 @@ function dict2CameraUi(dict) {
     $('#framerateSlider').val(dict['framerate']); markHideIfNull('framerate', 'framerateSlider');
     $('#privacyMaskSwitch')[0].checked = dict['privacy_mask']; markHideIfNull('privacy_mask', 'privacyMaskSwitch');
     $('#privacyMaskLinesEntry').val((dict['privacy_mask_lines'] || []).join(',')); markHideIfNull('privacy_mask_lines', 'privacyMaskLinesEntry');
+    $('#libcamParamsEntry').val(dict['libcam_params']); markHideIfNull('libcam_params', 'libcamParamsEntry');
     $('#extraOptionsEntry').val(dict['extra_options'] ? (dict['extra_options'].map(function (o) {
         return o.join(' ');
     }).join('\r\n')) : ''); markHideIfNull('extra_options', 'extraOptionsEntry');
@@ -3574,7 +3576,7 @@ function getCameraIdsByInstance() {
     var cameraIdsByInstance = {};
     getCameraFrames().each(function () {
         var instance;
-        if (this.config.proto == 'netcam' || this.config.proto == 'v4l2' || this.config.proto == 'mmal') {
+        if (this.config.proto == 'netcam' || this.config.proto == 'v4l2' || this.config.proto == 'libcamera') {
             instance = '';
         }
         else if (this.config.proto == 'motioneye') {
@@ -3928,7 +3930,7 @@ function runAddCameraDialog() {
                     '<td class="dialog-item-label"><span class="dialog-item-label">'+i18n.gettext("Kamerao tipo")+'</span></td>' +
                     '<td class="dialog-item-value"><select class="styled" id="typeSelect">' +
                         (hasLocalCamSupport ? '<option value="v4l2">'+i18n.gettext("Loka V4L2-kamerao")+'</option>' : '') +
-                        (hasLocalCamSupport ? '<option value="mmal">'+i18n.gettext("Loka MMAL-kamerao")+'</option>' : '') +
+                        (hasLocalCamSupport ? '<option value="libcamera">'+i18n.gettext("Local libcamera Camera")+'</option>' : '') +
                         (hasNetCamSupport ? '<option value="netcam">'+i18n.gettext("Reta kamerao")+'</option>' : '') +
                         '<option value="motioneye">'+i18n.gettext("Fora motionEye kamerao")+'</option>' +
                         '<option value="mjpeg">'+i18n.gettext("Simpla MJPEG-kamerao")+'</option>' +
@@ -3950,15 +3952,15 @@ function runAddCameraDialog() {
                     '<td class="dialog-item-value"><input type="password" class="styled" id="passwordEntry" placeholder="'+i18n.gettext("pasvorto...")+'"></td>' +
                     '<td><span class="help-mark" title="'+i18n.gettext("la pasvorto por la URL, se bezonata")+'">?</span></td>' +
                 '</tr>' +
-                '<tr class="v4l2 motioneye netcam mjpeg mmal">' +
+                '<tr class="v4l2 motioneye netcam mjpeg libcamera">' +
                     '<td class="dialog-item-label"><span class="dialog-item-label">'+i18n.gettext("Kamerao")+'</span></td>' +
                     '<td class="dialog-item-value"><select class="styled" id="addCameraSelect"></select><span id="cameraMsgLabel"></span></td>' +
                     '<td><span class="help-mark" title="'+i18n.gettext("la kameraon, kiun vi volas aldoni")+'">?</span></td>' +
                 '</tr>' +
-                '<tr class="v4l2 motioneye netcam mjpeg mmal">' +
+                '<tr class="v4l2 motioneye netcam mjpeg libcamera">' +
                     '<td colspan="100"><div class="dialog-item-separator"></div></td>' +
                 '</tr>' +
-                '<tr class="v4l2 motioneye netcam mjpeg mmal">' +
+                '<tr class="v4l2 motioneye netcam mjpeg libcamera">' +
                     '<td class="dialog-item-value" colspan="100"><div id="addCameraInfo"></div></td>' +
                 '</tr>' +
             '</table>');
@@ -3980,7 +3982,7 @@ function runAddCameraDialog() {
 
     /* ui interaction */
     function updateUi() {
-        content.find('tr.v4l2, tr.motioneye, tr.netcam, tr.mjpeg, tr.mmal').css('display', 'none');
+        content.find('tr.v4l2, tr.motioneye, tr.netcam, tr.mjpeg, tr.libcamera').css('display', 'none');
 
         if (typeSelect.val() == 'motioneye') {
             content.find('tr.motioneye').css('display', 'table-row');
@@ -4004,10 +4006,10 @@ function runAddCameraDialog() {
             addCameraInfo.html(
 		i18n.gettext("Retaj kameraoj (aŭ IP-kameraoj) estas aparatoj, kiuj denaske fluas RTSP/RTMP aŭ MJPEG-filmetojn aŭ simplajn JPEG-bildojn. Konsultu la manlibron de via aparato por ekscii la ĝustan URL RTSP, RTMP, MJPEG aŭ JPEG."));
         }
-        else if (typeSelect.val() == 'mmal') {
-            content.find('tr.mmal').css('display', 'table-row');
+        else if (typeSelect.val() == 'libcamera') {
+            content.find('tr.libcamera').css('display', 'table-row');
             addCameraInfo.html(
-		i18n.gettext("Lokaj MMAL-kameraoj estas aparatoj konektitaj rekte al via motionEye-sistemo. Ĉi tiuj estas kutime kart-specifaj kameraoj."));
+		i18n.gettext("Local libcamera cameras are devices connected directly to your motionEye system. These are usually board-specific cameras."));
         }
         else if (typeSelect.val() == 'mjpeg') {
             usernameEntry.removeAttr('readonly');
@@ -4203,9 +4205,9 @@ function runAddCameraDialog() {
                 data.proto = 'netcam';
                 data.camera_index = addCameraSelect.val();
             }
-            else if (typeSelect.val() == 'mmal') {
+            else if (typeSelect.val() == 'libcamera') {
                 data.path = addCameraSelect.val();
-                data.proto = 'mmal';
+                data.proto = 'libcamera';
             }
             else if (typeSelect.val() == 'mjpeg') {
                 data = splitCameraUrl(urlEntry.val());

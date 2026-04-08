@@ -35,7 +35,7 @@ from motioneye import (
     uploadservices,
     utils,
 )
-from motioneye.controls import mmalctl, smbctl, tzctl, v4l2ctl
+from motioneye.controls import libcamctl, smbctl, tzctl, v4l2ctl
 from motioneye.controls.powerctl import PowerControl
 from motioneye.handlers.base import BaseHandler
 from motioneye.utils.mjpeg import test_mjpeg_url
@@ -461,16 +461,16 @@ class ConfigHandler(BaseHandler):
 
             return self.finish_json({'cameras': cameras})
 
-        elif proto == 'mmal':
+        elif proto == 'libcamera':
             configured_devices = set()
             for camera_id in config.get_camera_ids():
                 data = config.get_camera(camera_id)
-                if utils.is_mmal_camera(data):
-                    configured_devices.add(data['mmalcam_name'])
+                if utils.is_libcamera_camera(data):
+                    configured_devices.add(data['libcam_device'])
 
             cameras = [
                 {'id': d[0], 'name': d[1]}
-                for d in mmalctl.list_devices()
+                for d in libcamctl.list_devices()
                 if (d[0] not in configured_devices)
             ]
 

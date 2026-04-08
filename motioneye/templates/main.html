@@ -364,6 +364,14 @@
                             <td colspan="100"><div class="settings-item-separator"></div></td>
                         </tr>
                         <tr class="settings-item">
+                            <td class="settings-item-label"><span class="settings-item-label">{{ _("libcamera Parameters") }}</span></td>
+                            <td class="settings-item-value"><textarea class="styled device camera-config" id="libcamParamsEntry" rows="3" placeholder="{{ _("e.g. Brightness=0.1,Contrast=1.0,Transform=HFlip") }}"></textarea></td>
+                            <td><span class="help-mark" title="{{ _("Comma-separated libcamera controls passed to Motion's libcam_params option.") }}">?</span></td>
+                        </tr>
+                        <tr class="settings-item">
+                            <td colspan="100"><div class="settings-item-separator"></div></td>
+                        </tr>
+                        <tr class="settings-item">
                             <td class="settings-item-label"><span class="settings-item-label">{{ _("Ekstraj Elektoj") }}</span></td>
                             <td class="settings-item-value"><textarea class="styled device camera-config" id="extraOptionsEntry" rows="3"></textarea></td>
                             <td><span class="help-mark" title="{{ _("vi povas aldoni iujn ajn pliajn opciojn ĉi tie por la «motion» demono (uzu la «nomo valoro» formaton, unu opcion por linio)") }}">?</span></td>

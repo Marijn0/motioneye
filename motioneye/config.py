@@ -89,7 +89,8 @@ _USED_MOTION_OPTIONS = {
     'movie_quality',
     'movie_passthrough',
     'minimum_motion_frames',
-    'mmalcam_name',
+    'libcam_device',
+    'libcam_params',
     'netcam_params',
     'netcam_url',
     'netcam_userpass',
@@ -549,8 +550,8 @@ def add_camera(device_details):
         camera_config['@password'] = device_details['password']
         camera_config['@remote_camera_id'] = device_details['remote_camera_id']
 
-    elif proto == 'mmal':
-        camera_config['mmalcam_name'] = device_details['path']
+    elif proto == 'libcamera':
+        camera_config['libcam_device'] = device_details['path']
         camera_config['width'] = 640
         camera_config['height'] = 480
 
@@ -904,13 +905,13 @@ def motion_camera_ui_to_dict(ui, prev_config=None):
     if utils.is_v4l2_camera(prev_config):
         proto = 'v4l2'
 
-    elif utils.is_mmal_camera(prev_config):
-        proto = 'mmal'
+    elif utils.is_libcamera_camera(prev_config):
+        proto = 'libcamera'
 
     else:
         proto = 'netcam'
 
-    if proto in ('v4l2', 'mmal'):
+    if proto in ('v4l2', 'libcamera'):
         # leave video_device unchanged
 
         # resolution
@@ -931,6 +932,8 @@ def motion_camera_ui_to_dict(ui, prev_config=None):
                 for n, c in list(ui['video_controls'].items())
             )
             data['video_params'] = ','.join(video_params)
+        else:
+            data['libcam_params'] = ui.get('libcam_params', '')
 
     else:  # assuming netcam
         if match(
@@ -1323,6 +1326,7 @@ def motion_camera_dict_to_ui(data):  # noqa: C901
         'rotation': int(data['rotate']),
         'privacy_mask': False,
         'privacy_mask_lines': [],
+        'libcam_params': None,
         # file storage
         'smb_shares': settings.SMB_SHARES,
         'storage_device': data['@storage_device'],
@@ -1461,9 +1465,10 @@ def motion_camera_dict_to_ui(data):  # noqa: C901
             # we have no other choice but use something like 640x480 as reference
             threshold = data['threshold'] * 100.0 / (640 * 480)
 
-    elif utils.is_mmal_camera(data):
-        ui['device_url'] = data['mmalcam_name']
-        ui['proto'] = 'mmal'
+    elif utils.is_libcamera_camera(data):
+        ui['device_url'] = data['libcam_device']
+        ui['proto'] = 'libcamera'
+        ui['libcam_params'] = data.get('libcam_params', '')
 
         resolutions = utils.COMMON_RESOLUTIONS
         resolutions = [r for r in resolutions if motionctl.resolution_is_valid(*r)]
@@ -2207,6 +2212,12 @@ def _set_default_motion_camera(camera_id, data):
         data.setdefault('video_params', '')
         data.setdefault('width', 352)
         data.setdefault('height', 288)
+
+    elif utils.is_libcamera_camera(data):
+        data.setdefault('libcam_device', 'camera0')
+        data.setdefault('libcam_params', '')
+        data.setdefault('width', 640)
+        data.setdefault('height', 480)
 
     data.setdefault('auto_brightness', False)
     data.setdefault('framerate', 2)

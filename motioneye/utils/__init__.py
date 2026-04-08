@@ -200,7 +200,7 @@ def is_local_motion_camera(config):
     return bool(
         config.get('video_device')
         or config.get('netcam_url')
-        or config.get('mmalcam_name')
+        or config.get('libcam_device')
     )
 
 
@@ -214,9 +214,9 @@ def is_v4l2_camera(config):
     return bool(config.get('video_device'))
 
 
-def is_mmal_camera(config):
-    """Tells if a camera is mmal device managed by the local motion instance."""
-    return bool(config.get('mmalcam_name'))
+def is_libcamera_camera(config):
+    """Tells if a camera is a libcamera device managed by the local motion instance."""
+    return bool(config.get('libcam_device'))
 
 
 def is_net_camera(config):
