@@ -341,13 +341,14 @@ def get_jpg(camera_id):
         port = config.get_camera_streaming_port(camera_config)
         username, password = None, None
         auth_mode = None
-        if camera_config.get('stream_auth_method') > 0:
-            parts = (camera_config.get('stream_authentication') or '').split(':', 1)
+        streaming_auth_mode = config.get_camera_streaming_auth_mode(camera_config)
+        if streaming_auth_mode != 'disabled':
+            parts = config.get_camera_streaming_authentication(camera_config).split(
+                ':', 1
+            )
             username = parts[0]
             password = parts[1] if len(parts) > 1 else ''
-            auth_mode = (
-                'digest' if camera_config.get('stream_auth_method') > 1 else 'basic'
-            )
+            auth_mode = streaming_auth_mode
 
         stream_path = get_stream_path(camera_id)
         client = MjpgClient(camera_id, port, stream_path, username, password, auth_mode)
