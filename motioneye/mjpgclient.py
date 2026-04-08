@@ -45,14 +45,18 @@ class MjpgClient(IOStream):
         self._password = password or ''
         self._auth_mode = auth_mode
         self._auth_digest_state = {}
+        self._pending_auth_header = None
+        self._reconnect_on_close = False
 
         self._last_access = 0
         self._last_jpg = None
         self._last_jpg_times = []
 
+        self._reset_stream()
+
+    def _reset_stream(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
         IOStream.__init__(self, s)
-
         self.set_close_callback(self.on_close)
 
     def do_connect(self) -> 'Future[MjpgClient]':
@@ -73,6 +77,15 @@ class MjpgClient(IOStream):
         return ('\r\n'.join(headers) + '\r\n\r\n').encode()
 
     def on_close(self):
+        if self._reconnect_on_close:
+            self._reconnect_on_close = False
+            logging.debug(
+                f'reconnecting mjpg client for camera {self._camera_id} on port {self._port}'
+            )
+            self._reset_stream()
+            self.do_connect()
+            return
+
         logging.debug(
             f'connection closed for mjpg client for camera {self._camera_id} on port {self._port}'
         )
@@ -177,7 +190,11 @@ class MjpgClient(IOStream):
             f'mjpg client for camera {self._camera_id} connected on port {self._port}'
         )
 
-        if self._auth_mode == 'basic':
+        if self._pending_auth_header:
+            self.write(self._make_get_request(auth_header=self._pending_auth_header))
+            self._pending_auth_header = None
+
+        elif self._auth_mode == 'basic':
             logging.debug('mjpg client using basic authentication')
             auth_header = utils.build_basic_header(self._username, self._password)
             self.write(self._make_get_request(auth_header=auth_header))
@@ -261,9 +278,9 @@ class MjpgClient(IOStream):
                 self._password,
                 self._auth_digest_state,
             )
-            w_data = self._make_get_request(auth_header=auth_header)
-            w_future = utils.cast_future(self.write(w_data))
-            w_future.add_done_callback(self._seek_http)
+            self._pending_auth_header = auth_header
+            self._reconnect_on_close = True
+            self.close()
 
             return
 
