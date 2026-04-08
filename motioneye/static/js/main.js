@@ -935,7 +935,7 @@ function initUI() {
         pushMainConfig($(this).parents('tr:eq(0)').attr('reboot') == 'true');
     });
     $('input.camera-config, select.camera-config, textarea.camera-config').on('change', function () {
-        pushCameraConfig($(this).parents('tr:eq(0)').attr('reboot') == 'true');
+        pushCameraConfig($(this).parents('tr:eq(0)').attr('reboot') == 'true', this.id);
     });
 
     /* whenever the window is resized,
@@ -2398,6 +2398,9 @@ function dict2CameraUi(dict) {
     else {
         snapshotUrl = cameraUrl + 'current/';
         mjpgUrl = location.protocol + '//' + location.host.split(':')[0] + ':' + dict.streaming_port;
+        if (isMotion5) {
+            mjpgUrl += '/mjpg/stream';
+        }
         embedUrl = cameraUrl + 'frame/';
     }
 
@@ -3516,6 +3519,9 @@ function pushMainConfig(reboot) {
     }
 
     var mainConfig = mainUi2Dict();
+    if (isMotion5 && pushConfigs.main && pushConfigs.main.webcontrol_port != null) {
+        mainConfig.webcontrol_port = pushConfigs.main.webcontrol_port;
+    }
 
     pushConfigReboot = pushConfigReboot || reboot;
     pushConfigs['main'] = mainConfig;
@@ -3524,7 +3530,7 @@ function pushMainConfig(reboot) {
     }
 }
 
-function pushCameraConfig(reboot) {
+function pushCameraConfig(reboot, changedField) {
     if (!initialConfigFetched) {
         return;
     }
@@ -3535,6 +3541,18 @@ function pushCameraConfig(reboot) {
     }
 
     var cameraConfig = cameraUi2Dict();
+    if (isMotion5) {
+        var mainConfig = pushConfigs.main;
+        if (mainConfig && mainConfig.webcontrol_port != null) {
+            cameraConfig.streaming_port = mainConfig.webcontrol_port;
+        }
+
+        if (changedField == 'streamingPortEntry') {
+            mainConfig = mainConfig || mainUi2Dict();
+            mainConfig.webcontrol_port = cameraConfig.streaming_port;
+            pushConfigs.main = mainConfig;
+        }
+    }
 
     pushConfigReboot = pushConfigReboot || reboot;
     pushConfigs[cameraId] = cameraConfig;

@@ -37,9 +37,10 @@ class MjpgClient(IOStream):
         0  # helps detecting erroneous connections and restart motion
     )
 
-    def __init__(self, camera_id, port, username, password, auth_mode):
+    def __init__(self, camera_id, port, path, username, password, auth_mode):
         self._camera_id = camera_id
         self._port = port
+        self._path = path
         self._username = username or ''
         self._password = password or ''
         self._auth_mode = auth_mode
@@ -61,6 +62,15 @@ class MjpgClient(IOStream):
 
     def get_port(self):
         return self._port
+
+    def _make_get_request(self, auth_header=None, keep_alive=False):
+        headers = [f'GET {self._path} HTTP/1.0']
+        if auth_header:
+            headers.append(f'Authorization: {auth_header}')
+        if keep_alive:
+            headers.append('Connection: keep-alive')
+
+        return ('\r\n'.join(headers) + '\r\n\r\n').encode()
 
     def on_close(self):
         logging.debug(
@@ -170,19 +180,17 @@ class MjpgClient(IOStream):
         if self._auth_mode == 'basic':
             logging.debug('mjpg client using basic authentication')
             auth_header = utils.build_basic_header(self._username, self._password)
-            self.write(
-                f'GET / HTTP/1.0\r\nAuthorization: {auth_header}\r\n\r\n'.encode()
-            )
+            self.write(self._make_get_request(auth_header=auth_header))
 
         elif (
             self._auth_mode == 'digest'
         ):  # in digest auth mode, the header is built upon receiving 401
             logging.debug('digest authentication _on_connect')
-            self.write(b'GET / HTTP/1.0\r\nConnection: keep-alive\r\n\r\n')
+            self.write(self._make_get_request(keep_alive=True))
 
         else:  # no authentication
             logging.debug('no authentication _on_connect')
-            self.write(b'GET / HTTP/1.0\r\n\r\n')
+            self.write(self._make_get_request())
 
         self._seek_http()
 
@@ -230,7 +238,7 @@ class MjpgClient(IOStream):
             logging.debug('mjpg client using basic authentication')
 
             auth_header = utils.build_basic_header(self._username, self._password)
-            w_data = f'GET / HTTP/1.0\r\nAuthorization: {auth_header}\r\n\r\n'.encode()
+            w_data = self._make_get_request(auth_header=auth_header)
             w_future = utils.cast_future(self.write(w_data))
             w_future.add_done_callback(self._seek_http)
 
@@ -247,9 +255,13 @@ class MjpgClient(IOStream):
             self._auth_digest_state = parts_dict
 
             auth_header = utils.build_digest_header(
-                'GET', '/', self._username, self._password, self._auth_digest_state
+                'GET',
+                self._path,
+                self._username,
+                self._password,
+                self._auth_digest_state,
             )
-            w_data = f'GET / HTTP/1.0\r\nAuthorization: {auth_header}\r\n\r\n'.encode()
+            w_data = self._make_get_request(auth_header=auth_header)
             w_future = utils.cast_future(self.write(w_data))
             w_future.add_done_callback(self._seek_http)
 
@@ -326,7 +338,7 @@ def get_jpg(camera_id):
 
             return None
 
-        port = camera_config['stream_port']
+        port = config.get_camera_streaming_port(camera_config)
         username, password = None, None
         auth_mode = None
         if camera_config.get('stream_auth_method') > 0:
@@ -337,7 +349,10 @@ def get_jpg(camera_id):
                 'digest' if camera_config.get('stream_auth_method') > 1 else 'basic'
             )
 
-        client = MjpgClient(camera_id, port, username, password, auth_mode)
+        stream_path = get_stream_path()
+        client = MjpgClient(
+            camera_id, port, stream_path, username, password, auth_mode
+        )
         client.do_connect()
 
         MjpgClient.clients[camera_id] = client
@@ -406,3 +421,10 @@ def _garbage_collector():
             client.close()
 
             continue
+
+
+def get_stream_path():
+    if motionctl.is_motion5():
+        return '/mjpg/stream'
+
+    return '/'

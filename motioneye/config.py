@@ -659,6 +659,9 @@ def main_ui_to_dict(ui):
         '@normal_username': ui['normal_username'],
     }
 
+    if ui.get('webcontrol_port') is not None:
+        data['webcontrol_port'] = int(ui['webcontrol_port'])
+
     def call_hook(u, p):
         if settings.PASSWORD_HOOK:
             env = {'MEYE_USERNAME': u, 'MEYE_PASSWORD': p}
@@ -706,6 +709,9 @@ def main_dict_to_ui(data):
         'admin_username': data['@admin_username'],
         'normal_username': data['@normal_username'],
     }
+
+    if data.get('webcontrol_port') is not None:
+        ui['webcontrol_port'] = int(data['webcontrol_port'])
 
     if data['@lang']:
         ui['lang'] = data['@lang']
@@ -815,7 +821,6 @@ def motion_camera_ui_to_dict(ui, prev_config=None):
         'text_scale': ui['text_scale'],
         # streaming
         'stream_localhost': not ui['video_streaming'],
-        'stream_port': int(ui['streaming_port']),
         'stream_maxrate': int(ui['streaming_framerate']),
         'stream_quality': max(1, int(ui['streaming_quality'])),
         '@webcam_resolution': max(1, int(ui['streaming_resolution'])),
@@ -871,6 +876,8 @@ def motion_camera_ui_to_dict(ui, prev_config=None):
         'on_movie_end': '',
         'on_picture_save': '',
     }
+
+    set_camera_streaming_port(prev_config, ui['streaming_port'])
 
     if data.get('stream_auth_method', 0) > 0:
         streaming_username = ui.get('streaming_username')
@@ -1359,7 +1366,7 @@ def motion_camera_dict_to_ui(data):  # noqa: C901
         'streaming_quality': int(data['stream_quality']),
         'streaming_resolution': int(data['@webcam_resolution']),
         'streaming_server_resize': data['@webcam_server_resize'],
-        'streaming_port': int(data['stream_port']),
+        'streaming_port': get_camera_streaming_port(data),
         'streaming_auth_mode': {0: 'disabled', 1: 'basic', 2: 'digest'}.get(
             data.get('stream_auth_method'), 'disabled'
         ),
@@ -2234,7 +2241,10 @@ def _set_default_motion_camera(camera_id, data):
     data.setdefault('@clean_cloud_enabled', False)
 
     data.setdefault('stream_localhost', True)
-    data.setdefault('stream_port', 9080 + camera_id)
+    if motionctl.is_motion5():
+        data.pop('stream_port', None)
+    else:
+        data.setdefault('stream_port', 9080 + camera_id)
     data.setdefault('stream_maxrate', 5)
     data.setdefault('stream_quality', 85)
     data.setdefault('stream_motion', False)
@@ -2305,6 +2315,28 @@ def _set_default_motion_camera(camera_id, data):
     data.setdefault('on_event_end', '')
     data.setdefault('on_movie_end', '')
     data.setdefault('on_picture_save', '')
+
+
+def get_camera_streaming_port(camera_config, main_config=None):
+    if motionctl.is_motion5():
+        if main_config is None:
+            main_config = get_main()
+
+        return int(main_config.get('webcontrol_port', settings.MOTION_CONTROL_PORT))
+
+    return int(camera_config['stream_port'])
+
+
+def set_camera_streaming_port(camera_config, streaming_port, main_config=None):
+    streaming_port = int(streaming_port)
+    if motionctl.is_motion5():
+        camera_config.pop('stream_port', None)
+
+        if main_config is not None:
+            main_config['webcontrol_port'] = streaming_port
+
+    else:
+        camera_config['stream_port'] = streaming_port
 
 
 def _set_default_simple_mjpeg_camera(camera_id, data):

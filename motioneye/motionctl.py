@@ -74,6 +74,30 @@ def find_motion():
     return _motion_binary_cache
 
 
+def motion_major_version():
+    _, version = find_motion()
+    if not version:
+        return None
+
+    match = re.match(r'(\d+)', version)
+    if not match:
+        return None
+
+    return int(match.group(1))
+
+
+def is_motion5():
+    major_version = motion_major_version()
+    return major_version is not None and major_version >= 5
+
+
+def get_webcontrol_port():
+    from motioneye import config
+
+    main_config = config.get_main()
+    return int(main_config.get('webcontrol_port', settings.MOTION_CONTROL_PORT))
+
+
 def start(deferred=False):
     from motioneye import config, mjpgclient
 
@@ -219,7 +243,9 @@ async def get_motion_detection(camera_id) -> utils.GetMotionDetectionResult:
         logging.error(error)
         return utils.GetMotionDetectionResult(None, error=error)
 
-    url = f'http://127.0.0.1:{settings.MOTION_CONTROL_PORT}/{motion_camera_id}/detection/status'
+    url = (
+        f'http://127.0.0.1:{get_webcontrol_port()}/{motion_camera_id}/detection/status'
+    )
 
     request = HTTPRequest(
         url,
@@ -254,7 +280,10 @@ async def set_motion_detection(camera_id, enabled):
         f"{['disabling', 'enabling'][enabled]} motion detection for camera with id {camera_id}"
     )
 
-    url = f"http://127.0.0.1:{settings.MOTION_CONTROL_PORT}/{motion_camera_id}/detection/{['pause', 'start'][enabled]}"
+    url = (
+        f"http://127.0.0.1:{get_webcontrol_port()}/{motion_camera_id}/detection/"
+        f"{['pause', 'start'][enabled]}"
+    )
 
     request = HTTPRequest(
         url,
@@ -286,7 +315,9 @@ async def take_snapshot(camera_id):
 
     logging.debug(f'taking snapshot for camera with id {camera_id}')
 
-    url = f'http://127.0.0.1:{settings.MOTION_CONTROL_PORT}/{motion_camera_id}/action/snapshot'
+    url = (
+        f'http://127.0.0.1:{get_webcontrol_port()}/{motion_camera_id}/action/snapshot'
+    )
 
     request = HTTPRequest(
         url,
