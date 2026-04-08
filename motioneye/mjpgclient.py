@@ -359,7 +359,7 @@ def get_jpg(camera_id):
         username, password = None, None
         auth_mode = None
         streaming_auth_mode = config.get_camera_streaming_auth_mode(camera_config)
-        if streaming_auth_mode != 'disabled':
+        if streaming_auth_mode != 'none':
             parts = config.get_camera_streaming_authentication(camera_config).split(
                 ':', 1
             )

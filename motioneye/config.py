@@ -276,8 +276,6 @@ def set_main(main_config):
     for n, v in list(_main_config_cache.items()):
         main_config.setdefault(n, v)
 
-    _drop_legacy_main_options(main_config)
-
     if main_config.get('webcontrol_interface') is not None:
         main_config['webcontrol_interface'] = 'default'
     _main_config_cache = main_config
@@ -957,8 +955,6 @@ def motion_camera_ui_to_dict(ui, prev_config=None):
         'on_movie_end': '',
         'on_picture_save': '',
     }
-
-    _drop_legacy_motion_options(prev_config)
 
     set_camera_streaming_localhost(prev_config, not ui['video_streaming'], main_config)
     set_camera_streaming_port(prev_config, ui['streaming_port'])
