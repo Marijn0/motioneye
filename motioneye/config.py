@@ -1320,6 +1320,7 @@ def motion_camera_dict_to_ui(data):  # noqa: C901
         'name': data['camera_name'],
         'enabled': data['@enabled'],
         'id': data['@id'],
+        'motion_camera_id': motionctl.camera_id_to_motion_camera_id(data['@id']),
         'admin_only': data.get('@admin_only', False),
         'auto_brightness': data['auto_brightness'],
         'framerate': int(data['framerate']),

@@ -349,7 +349,7 @@ def get_jpg(camera_id):
                 'digest' if camera_config.get('stream_auth_method') > 1 else 'basic'
             )
 
-        stream_path = get_stream_path()
+        stream_path = get_stream_path(camera_id)
         client = MjpgClient(
             camera_id, port, stream_path, username, password, auth_mode
         )
@@ -423,8 +423,10 @@ def _garbage_collector():
             continue
 
 
-def get_stream_path():
+def get_stream_path(camera_id):
     if motionctl.is_motion5():
-        return '/mjpg/stream'
+        motion_camera_id = motionctl.camera_id_to_motion_camera_id(camera_id)
+        if motion_camera_id is not None:
+            return f'/{motion_camera_id}/mjpg/stream'
 
     return '/'

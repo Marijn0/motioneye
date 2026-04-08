@@ -2400,8 +2400,8 @@ function dict2CameraUi(dict) {
     else {
         snapshotUrl = cameraUrl + 'current/';
         mjpgUrl = location.protocol + '//' + location.host.split(':')[0] + ':' + dict.streaming_port;
-        if (isMotion5) {
-            mjpgUrl += '/mjpg/stream';
+        if (isMotion5 && dict.motion_camera_id) {
+            mjpgUrl += '/' + dict.motion_camera_id + '/mjpg/stream';
         }
         embedUrl = cameraUrl + 'frame/';
     }
