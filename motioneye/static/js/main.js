@@ -2265,7 +2265,6 @@ function dict2CameraUi(dict) {
     $('#deviceTypeEntry').val(prettyType); markHideIfNull(!prettyType, 'deviceTypeEntry');
     $('#deviceTypeEntry')[0].proto = dict['proto'];
     $('#adminOnlySwitch')[0].checked = dict['admin_only']; markHideIfNull('admin_only', 'adminOnlySwitch');
-    markHideIfNull(true, 'autoBrightnessSwitch');
 
     $('#resolutionSelect').html('');
     if (dict['available_resolutions']) {
