@@ -32,6 +32,7 @@ var pageContainer = null;
 var overlayVisible = false;
 var layoutColumns = 1;
 var fitFramesVertically = false;
+var mediaViewMode = 'list';
 // Was removed 5 years ago, needs cleanup, a25dec205b70fbf0f75f8c2f424d4920a875f399
 // var layoutRows = 1;
 var modalContainer = null;
@@ -1786,7 +1787,8 @@ function prefsUi2Dict() {
         'fit_frames_vertically': $('#fitFramesVerticallySwitch')[0].checked,
         'layout_rows': parseInt($('#layoutRowsSlider').val()),
         'framerate_factor': $('#framerateDimmerSlider').val() / 100,
-        'resolution_factor': $('#resolutionDimmerSlider').val() / 100
+        'resolution_factor': $('#resolutionDimmerSlider').val() / 100,
+        'media_view_mode': mediaViewMode
     };
 
     return dict;
@@ -1808,6 +1810,7 @@ function applyPrefs(dict) {
     layoutRows = dict['layout_rows'];
     framerateFactor = dict['framerate_factor'];
     resolutionFactor = dict['resolution_factor'];
+    mediaViewMode = dict['media_view_mode'];
 
     if (fitFramesVertically) {
         getPageContainer().addClass('fit-frames-vertically');
@@ -4359,27 +4362,31 @@ function runTimelapseDialog(cameraId, groupKey, group) {
 
 function runMediaDialog(cameraId, mediaType) {
     var dialogDiv = $('<div class="media-dialog"></div>');
-    var mediaListDiv = $('<div class="media-dialog-list"></div>');
+    var mediaListDiv = $('<div class="' + (mediaViewMode == 'grid' ? 'media-dialog-grid' : 'media-dialog-list') + '"></div>');
     var groupsDiv = $('<div class="media-dialog-groups"></div>');
     var buttonsDiv = $('<div class="media-dialog-buttons"></div>');
 
     var groups = {};
     var groupKey = null;
+    var mediaViewAnchor = null;
 
     dialogDiv.append(groupsDiv);
     dialogDiv.append(mediaListDiv);
     dialogDiv.append(buttonsDiv);
 
-    /* add a temporary div to compute 3em in px */
-    var tempDiv = $('<div style="width: 3em; height: 3em;"></div>');
-    modalContainer.append(tempDiv);
-    var height = tempDiv.height();
-    tempDiv.remove();
+    var emToPx = parseFloat(getComputedStyle(modalContainer[0]).fontSize);
+    var height = Math.round(3 * emToPx);
+    var gridPreviewDisplayHeight = Math.round(14 * emToPx);
+    var gridPreviewHeight = Math.max(gridPreviewDisplayHeight, 240);
+    var gridPreviewRatio = null;
+
+    var viewButton = $('<div class="media-dialog-button"></div>');
+    buttonsDiv.append(viewButton);
 
     function showGroup(key) {
         groupKey = key;
 
-        if (mediaListDiv.find('img.media-list-progress').length) {
+        if (mediaListDiv.find('img.media-list-progress, img.media-grid-progress').length) {
             return; /* already in progress of loading */
         }
 
@@ -4410,14 +4417,22 @@ function runMediaDialog(cameraId, mediaType) {
                 if (!entryDiv) {
                     entryDiv = $('<div class="media-list-entry"></div>');
 
-                    var previewImg = $('<img class="media-list-preview" src="' + staticPath + 'img/modal-progress.gif"/>');
+                    var previewImg = $('<img class="media-list-preview loading" src="' + staticPath + 'img/modal-progress.gif"/>');
                     entryDiv.append(previewImg);
-                    previewImg[0]._src = addAuthParams('GET', basePath + mediaType + '/' + cameraId + '/preview' + entry.path + '?height=' + height);
+                    queueEntryPreview(previewImg, entry);
+                    previewImg.on('load error', function () {
+                        if (!this._src) {
+                            $(this).removeClass('loading');
+                            setGridPlaceholderWidth(this);
+                        }
+                    });
 
-                    var downloadButton = $('<div class="media-list-download-button button">'+i18n.gettext("Elŝuti")+'</div>');
+                    var downloadButtonClass = mediaViewMode == 'grid' ? 'media-grid-download-button' : 'media-list-download-button';
+                    var downloadButton = $('<div class="' + downloadButtonClass + ' button">'+i18n.gettext("Elŝuti")+'</div>');
                     entryDiv.append(downloadButton);
 
-                    var deleteButton = $('<div class="media-list-delete-button button">'+i18n.gettext("Forigi")+'</div>');
+                    var deleteButtonClass = mediaViewMode == 'grid' ? 'media-grid-delete-button' : 'media-list-delete-button';
+                    var deleteButton = $('<div class="' + deleteButtonClass + ' button">'+i18n.gettext("Forigi")+'</div>');
                     if (isAdmin()) {
                         entryDiv.append(deleteButton);
                     }
@@ -4463,7 +4478,7 @@ function runMediaDialog(cameraId, mediaType) {
                             var pos = entries.indexOf(deletedEntry);
                             if (pos >= 0) {
                                 entries.splice(pos, 1); /* remove entry from group */
-                                $('.media-list-entry')[pos].remove(); /* remove entry from list in DOM */
+                                mediaListDiv.children('div.media-list-entry').eq(pos).remove(); /* remove entry from list in DOM */
                                 if (entries.length > 0) {
                                     updateGroupEntryCounter();
                                 } else {
@@ -4490,8 +4505,8 @@ function runMediaDialog(cameraId, mediaType) {
                 mediaListDiv.append(entryDiv);
             });
 
-            /* trigger a scroll event */
-            mediaListDiv.scroll();
+            applyMediaView();
+            restoreMediaViewAnchor();
         }
 
         /* if details are already fetched, simply add the entries and return */
@@ -4499,7 +4514,8 @@ function runMediaDialog(cameraId, mediaType) {
             return addEntries();
         }
 
-        var previewImg = $('<img class="media-list-progress" src="' + staticPath + 'img/modal-progress.gif"/>');
+        var progressClass = mediaViewMode == 'grid' ? 'media-grid-progress' : 'media-list-progress';
+        var previewImg = $('<img class="' + progressClass + '" src="' + staticPath + 'img/modal-progress.gif"/>');
         mediaListDiv.append(previewImg);
 
         var url = basePath + mediaType + '/' + cameraId + '/list/?prefix=' + (key || 'ungrouped') + '&with_stat=true';
@@ -4539,6 +4555,84 @@ function runMediaDialog(cameraId, mediaType) {
             addEntries();
         });
     }
+
+    function queueEntryPreview(previewImg, entry) {
+        var previewHeight = mediaViewMode == 'grid' ? gridPreviewHeight : height;
+        previewImg[0]._src = addAuthParams('GET', basePath + mediaType + '/' + cameraId + '/preview' + entry.path + '?height=' + previewHeight);
+    }
+
+    function setGridPlaceholderWidth(img) {
+        if (gridPreviewRatio || mediaViewMode != 'grid' || !img.naturalWidth || !img.naturalHeight) {
+            return;
+        }
+
+        gridPreviewRatio = img.naturalWidth / img.naturalHeight;
+        mediaListDiv[0].style.setProperty(
+            '--media-grid-placeholder-width',
+            Math.round(gridPreviewDisplayHeight * gridPreviewRatio) + 'px');
+    }
+
+    function applyMediaView() {
+        mediaListDiv.removeClass('media-dialog-list media-dialog-grid');
+        mediaListDiv.addClass(mediaViewMode == 'grid' ? 'media-dialog-grid' : 'media-dialog-list');
+        updateMediaViewButton();
+
+        /* trigger a scroll event so visible previews load when the layout changes */
+        mediaListDiv.scroll();
+    }
+
+    function updateMediaViewButton() {
+        viewButton.text(i18n.gettext(mediaViewMode == 'grid' ? "List view" : "Grid view"));
+    }
+
+    function saveMediaViewAnchor() {
+        var anchorEntryDiv = mediaListDiv.children('div.media-list-entry').filter(function () {
+            var entryDiv = $(this);
+            return entryDiv.position().top + entryDiv.outerHeight() > 0;
+        }).first();
+
+        mediaViewAnchor = anchorEntryDiv.length ? {
+            index: anchorEntryDiv.index(),
+            top: anchorEntryDiv.position().top
+        } : null;
+    }
+
+    function restoreMediaViewAnchor() {
+        if (!mediaViewAnchor) {
+            return;
+        }
+
+        var anchorEntryDiv = mediaListDiv.children('div.media-list-entry').eq(mediaViewAnchor.index);
+        if (anchorEntryDiv.length) {
+            mediaListDiv.scrollTop(mediaListDiv.scrollTop() + anchorEntryDiv.position().top - mediaViewAnchor.top);
+            mediaListDiv.scroll();
+        }
+
+        mediaViewAnchor = null;
+    }
+
+    function setMediaView(mode) {
+        if (mediaViewMode == mode) {
+            return;
+        }
+
+        saveMediaViewAnchor();
+        mediaViewMode = mode;
+        Object.keys(groups).forEach(function (key) {
+            groups[key].forEach(function (entry) {
+                delete entry.div;
+            });
+        });
+
+        showGroup(groupKey);
+
+        savePrefs();
+    }
+
+    viewButton.on('click', function () {
+        setMediaView(mediaViewMode == 'grid' ? 'list' : 'grid');
+    });
+    updateMediaViewButton();
 
     if (mediaType == 'picture') {
         var zippedButton = $('<div class="media-dialog-button">'+i18n.gettext("Zipitaj")+'</div>');
@@ -4726,8 +4820,7 @@ function runMediaDialog(cameraId, mediaType) {
         });
     });
 
-    /* install the media list scroll event handler */
-    mediaListDiv.scroll(function () {
+    function loadVisibleMediaPreviews() {
         var height = mediaListDiv.height();
 
         mediaListDiv.find('img.media-list-preview').each(function () {
@@ -4740,14 +4833,20 @@ function runMediaDialog(cameraId, mediaType) {
 
             var top1 = entryDiv.position().top;
             var top2 = top1 + entryDiv.height();
+            var preloadMargin = 4 * entryDiv.height();
 
-            if ((top1 >= 0 && top1 <= height) ||
-                (top2 >= 0 && top2 <= height)) {
+            if (top2 >= -preloadMargin && top1 <= height + preloadMargin) {
 
-                this.src = this._src;
+                var src = this._src;
                 delete this._src;
+                this.src = src;
             }
         });
+    }
+
+    /* install the media list scroll event handler */
+    mediaListDiv.scroll(function () {
+        loadVisibleMediaPreviews();
     });
 }
 

@@ -27,6 +27,7 @@ _DEFAULT_PREFS = {
     'layout_rows': 1,
     'framerate_factor': 1,
     'resolution_factor': 1,
+    'media_view_mode': 'list',
 }
 
 _prefs = None

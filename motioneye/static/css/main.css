@@ -602,6 +602,20 @@ div.media-dialog-list {
     display: inline-block;
 }
 
+div.media-dialog-grid {
+    --media-grid-placeholder-width: 18em;
+    overflow: auto;
+    position: relative;
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.8em;
+    align-content: flex-start;
+    align-items: flex-start;
+    padding: 0.5em;
+    box-sizing: border-box;
+    background-color: #363636;
+}
+
 div.media-list-group-title {
     background-color: #313131;
     font-size: 1.3em;
@@ -615,6 +629,14 @@ img.media-list-progress {
     top: 35%;
     display: block;
     margin: auto;
+}
+
+img.media-grid-progress {
+    display: block;
+    flex: 0 0 auto;
+    width: 3em;
+    height: 3em;
+    margin: 5em auto;
 }
 
 div.media-list-entry {
@@ -704,6 +726,117 @@ div.media-list-delete-button:HOVER {
 
 div.media-list-delete-button:ACTIVE {
     background-color: #B03427;
+}
+
+div.media-dialog-grid div.media-list-entry {
+    position: relative;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: fit-content;
+    max-width: 100%;
+    min-height: 14em;
+    border: 1px solid #313131;
+    border-radius: 4px;
+    overflow: hidden;
+    background-color: inherit;
+}
+
+div.media-dialog-grid img.media-list-preview {
+    float: none;
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 14em;
+    margin: 0;
+    border: 0;
+    box-shadow: none;
+}
+
+div.media-dialog-grid img.media-list-preview.loading {
+    width: var(--media-grid-placeholder-width);
+    height: 14em;
+    object-fit: none;
+}
+
+div.media-dialog-grid div.media-list-entry-name {
+    display: none;
+}
+
+div.media-dialog-grid div.media-list-entry-details,
+div.media-dialog-grid div.media-grid-download-button,
+div.media-dialog-grid div.media-grid-delete-button {
+    position: absolute;
+    z-index: 4;
+}
+
+div.media-dialog-grid div.media-list-entry-details {
+    left: 0.75em;
+    bottom: 0.75em;
+    padding: 0.16em 0.34em;
+    border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.32);
+    color: rgba(255, 255, 255, 0.96);
+    font-size: 0.72em;
+    font-weight: bold;
+}
+
+div.media-dialog-grid div.media-list-entry-details span.details-moment,
+div.media-dialog-grid div.media-list-entry-details span.details-size {
+    display: none;
+}
+
+div.media-dialog-grid div.media-list-entry-details span.details-moment-short {
+    display: inline;
+}
+
+div.media-dialog-grid div.media-grid-download-button,
+div.media-dialog-grid div.media-grid-delete-button {
+    bottom: 0.25rem;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    margin: 0;
+    font-size: 0;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: auto 77%;
+    background-color: rgba(0, 0, 0, 0.32);
+    border-radius: 3px;
+    transition: all 0.1s linear;
+}
+
+div.media-dialog-grid div.media-grid-download-button {
+    right: 0.5rem;
+    background-image: url(../img/media-download-button.svg);
+}
+
+div.media-dialog-grid div.media-grid-delete-button {
+    right: 2.75rem;
+    background-image: url(../img/media-delete-button.svg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    div.media-dialog-grid div.media-list-entry-details,
+    div.media-dialog-grid div.media-grid-download-button,
+    div.media-dialog-grid div.media-grid-delete-button {
+        opacity: 0;
+        transform: translateY(0.25em);
+        pointer-events: none;
+    }
+
+    div.media-dialog-grid div.media-list-entry:HOVER {
+        border-color: #494949;
+    }
+
+    div.media-dialog-grid div.media-list-entry:HOVER div.media-list-entry-details,
+    div.media-dialog-grid div.media-list-entry:HOVER div.media-grid-download-button,
+    div.media-dialog-grid div.media-list-entry:HOVER div.media-grid-delete-button {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
 }
 
 div.media-dialog-buttons {
@@ -1353,6 +1486,14 @@ img.camera-progress {
     div.media-list-entry-details span.details-moment-short {
         display: block;
     }
+
+    div.media-dialog-grid {
+        gap: 0.6em;
+        padding: 0.4em;
+        justify-content: center;
+    }
+
+
 }
 
 @media all and (max-width: 400px) {
