@@ -603,7 +603,7 @@ div.media-dialog-list {
 }
 
 div.media-dialog-grid {
-    --media-grid-placeholder-width: 18em;
+    --media-grid-placeholder-width: 20em;
     overflow: auto;
     position: relative;
     display: inline-flex;
@@ -611,6 +611,7 @@ div.media-dialog-grid {
     gap: 0.8em;
     align-content: flex-start;
     align-items: flex-start;
+    justify-content: center;
     padding: 0.5em;
     box-sizing: border-box;
     background-color: #363636;
@@ -1490,9 +1491,7 @@ img.camera-progress {
     div.media-dialog-grid {
         gap: 0.6em;
         padding: 0.4em;
-        justify-content: center;
     }
-
 
 }
 

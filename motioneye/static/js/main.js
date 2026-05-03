@@ -4379,6 +4379,7 @@ function runMediaDialog(cameraId, mediaType) {
     var gridPreviewDisplayHeight = Math.round(14 * emToPx);
     var gridPreviewHeight = Math.max(gridPreviewDisplayHeight, 240);
     var gridPreviewRatio = null;
+    var gridPreviewRatioPending = false;
 
     var viewButton = $('<div class="media-dialog-button"></div>');
     buttonsDiv.append(viewButton);
@@ -4423,7 +4424,6 @@ function runMediaDialog(cameraId, mediaType) {
                     previewImg.on('load error', function () {
                         if (!this._src) {
                             $(this).removeClass('loading');
-                            setGridPlaceholderWidth(this);
                         }
                     });
 
@@ -4562,14 +4562,22 @@ function runMediaDialog(cameraId, mediaType) {
     }
 
     function setGridPlaceholderWidth(img) {
-        if (gridPreviewRatio || mediaViewMode != 'grid' || !img.naturalWidth || !img.naturalHeight) {
-            return;
-        }
-
         gridPreviewRatio = img.naturalWidth / img.naturalHeight;
         mediaListDiv[0].style.setProperty(
             '--media-grid-placeholder-width',
             Math.round(gridPreviewDisplayHeight * gridPreviewRatio) + 'px');
+    }
+
+    /* Match unloaded grid placeholders to the camera aspect ratio to reduce flex layout shifts. */
+    function queueGridPlaceholderWidth(previewImg) {
+        gridPreviewRatioPending = true;
+        previewImg.one('load error', function () {
+            gridPreviewRatioPending = false;
+
+            if (!gridPreviewRatio && mediaViewMode == 'grid' && this.naturalWidth && this.naturalHeight) {
+                setGridPlaceholderWidth(this);
+            }
+        });
     }
 
     function applyMediaView() {
@@ -4582,7 +4590,8 @@ function runMediaDialog(cameraId, mediaType) {
     }
 
     function updateMediaViewButton() {
-        viewButton.text(i18n.gettext(mediaViewMode == 'grid' ? "List view" : "Grid view"));
+        var text = mediaViewMode == 'grid' ? i18n.gettext("List view") : i18n.gettext("Grid view");
+        viewButton.text(text);
     }
 
     function saveMediaViewAnchor() {
@@ -4835,10 +4844,14 @@ function runMediaDialog(cameraId, mediaType) {
             var top2 = top1 + entryDiv.height();
             var preloadMargin = 4 * entryDiv.height();
 
-            if (top2 >= -preloadMargin && top1 <= height + preloadMargin) {
+            if (top2 >= 0 && top1 <= height + preloadMargin) {
 
                 var src = this._src;
                 delete this._src;
+                if (!gridPreviewRatio && !gridPreviewRatioPending && mediaViewMode == 'grid') {
+                    queueGridPlaceholderWidth($this);
+                }
+
                 this.src = src;
             }
         });
