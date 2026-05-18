@@ -21,7 +21,7 @@ jobs:
           python-version: 3.x
           check-latest: true
       - run: pip install --upgrade pip setuptools
-      - run: pip install safety .
+      - run: pip install "click==8.3.3" safety .
       # Ignore CVE-2018-20225, which is IMO reasonably disputed: https://data.safetycli.com/v/67599/97c/
       # "extra"-index-url means an index to "additionally" look for newer versions, pre-compiled wheels, or similar, not to force this index being used.
       # There is "index-url" to enforce a different index: https://pip.pypa.io/en/stable/cli/pip_install/#cmdoption-i
