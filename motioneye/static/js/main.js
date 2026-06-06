@@ -1678,10 +1678,10 @@ function mainUi2Dict() {
         'lang': $('#langSelect').val()
     };
 
-    if (adminPasswordChanged.change && adminPasswordChanged.keydown && $('#adminPasswordEntry').val() !== '*****') {
+    if (adminPasswordChanged.change && $('#adminPasswordEntry').val() !== '*****') {
         dict['admin_password'] = $('#adminPasswordEntry').val();
     }
-    if (normalPasswordChanged.change && normalPasswordChanged.keydown && $('#normalPasswordEntry').val() !== '*****') {
+    if (normalPasswordChanged.change && $('#normalPasswordEntry').val() !== '*****') {
         dict['normal_password'] = $('#normalPasswordEntry').val();
     }
 
@@ -1976,7 +1976,7 @@ function cameraUi2Dict() {
         'working_schedule_type': $('#workingScheduleTypeSelect').val()
     };
 
-    if (streamingPasswordChanged.change && streamingPasswordChanged.keydown && $('#streamingPasswordEntry').val() !== '*****') {
+    if (streamingPasswordChanged.change && $('#streamingPasswordEntry').val() !== '*****') {
         dict['streaming_password'] = $('#streamingPasswordEntry').val();
     }
 
@@ -2619,7 +2619,7 @@ function doApply() {
             /* The backend invalidates the admin session if the admin password is updated.
              * It sends data.reload in that case, hence window.location.reload() would not be needed here.
              * But the dialog is not blocking the automatic reload, hence we do it here on Ok and return. */
-            if (adminPasswordChanged.change && adminPasswordChanged.keydown) {
+            if (adminPasswordChanged.change && $('#adminPasswordEntry').val() !== '*****') {
                 runAlertDialog(i18n.gettext('Admin password updated. Please log in again.'), () => window.location.reload());
                 return;
             }
