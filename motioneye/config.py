@@ -945,16 +945,24 @@ def input_sanity_check(regex, value, key, msg):
         )
 
 
+def validate_camera_name(value):
+    # Must match the corresponding regex in motioneye/static/js/main.js.
+    return input_sanity_check(
+        '^[A-Za-z0-9-_+ ]+$',
+        value,
+        'camera_name',
+        _(
+            'Device names are only allowed to contain alphanumerical characters, hyphen -, underscore _, plus +, and space'
+        ),
+    )
+
+
 def motion_camera_ui_to_dict(ui, prev_config=None):
     prev_config = dict(prev_config or {})
     main_config = get_main()  # needed for surveillance password
 
     # regex definitions for input sanity checks in backend
     # they must match the ones in motioneye/static/js/main.js
-    deviceNameValidRegExp = '^[A-Za-z0-9-_+ ]+$'
-    deviceNameFailMessage = _(
-        'Device names are only allowed to contain alphanumerical characters, hyphen -, underscore _, plus +, and space'
-    )
     filenameValidRegExp = '^([A-Za-z0-9 ()/._-]|%[CYmdHMSIplqv$])+$'
     filenameFailMessage = _(
         'File names are only allowed to contain alphanumerical characters, parenthesis (), forward slash /, dot ., '
@@ -977,9 +985,7 @@ def motion_camera_ui_to_dict(ui, prev_config=None):
 
     data = {
         # device
-        'camera_name': input_sanity_check(
-            deviceNameValidRegExp, ui['name'], 'camera_name', deviceNameFailMessage
-        ),
+        'camera_name': validate_camera_name(ui['name']),
         '@enabled': ui['enabled'],
         '@admin_only': ui.get('admin_only', False),
         'auto_brightness': ui['auto_brightness'],
@@ -2031,7 +2037,7 @@ def simple_mjpeg_camera_ui_to_dict(ui, prev_config=None):
 
     data = {
         # device
-        'camera_name': ui['name'],
+        'camera_name': validate_camera_name(ui['name']),
         '@enabled': ui['enabled'],
         '@admin_only': ui.get('admin_only', False),
     }
