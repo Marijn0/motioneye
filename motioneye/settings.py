@@ -143,3 +143,6 @@ SERVER_NAME = socket.gethostname()
 
 # lifetime in hours of the session cookie for the normal (viewer) user
 NORMAL_SESSION_EXPIRY_HOURS = 24
+
+# SameSite cookie attribute (strict, lax or none) for the normal (viewer) user
+NORMAL_SESSION_SAMESITE = 'Strict'

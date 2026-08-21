@@ -37,9 +37,25 @@ _session_store: dict = {}
 
 def session_expiry_seconds(user_type):
     # only the normal (viewer) account's lifetime is configurable
-    if user_type == 'normal':
-        return settings.NORMAL_SESSION_EXPIRY_HOURS * 3600
-    return _SESSION_EXPIRY_SECONDS
+    if user_type != 'normal':
+        return _SESSION_EXPIRY_SECONDS
+    return settings.NORMAL_SESSION_EXPIRY_HOURS * 3600
+
+
+_SAMESITE_VALUES = {'strict', 'lax', 'none'}
+
+
+def session_samesite(user_type):
+    # only the normal (viewer) user SameSite attribute is configurable, admin default is strict
+    if user_type != 'normal':
+        return 'strict'
+    value = str(settings.NORMAL_SESSION_SAMESITE).lower()
+    if value not in _SAMESITE_VALUES:
+        logging.warning(
+            f'invalid normal_session_samesite value: {settings.NORMAL_SESSION_SAMESITE!r}, using strict'
+        )
+        return 'strict'
+    return value
 
 
 def create_session(user_type):

@@ -97,3 +97,6 @@ add_remove_cameras true
 
 # lifetime in hours of the session cookie for the normal (viewer) user
 normal_session_expiry_hours 24
+
+# SameSite cookie attribute (strict, lax or none) for the normal (viewer) user
+normal_session_samesite strict

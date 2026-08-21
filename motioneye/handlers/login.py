@@ -24,7 +24,12 @@ from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHash, VerificationError, VerifyMismatchError
 
 from motioneye import config
-from motioneye.handlers.base import BaseHandler, create_session, session_expiry_seconds
+from motioneye.handlers.base import (
+    BaseHandler,
+    create_session,
+    session_expiry_seconds,
+    session_samesite,
+)
 from motioneye.utils.authstate import (
     PasswordHashState,
     build_password_hash_state,
@@ -146,7 +151,7 @@ class LoginHandler(BaseHandler):
             expires_days=session_expiry_seconds(user_type) / 86400,
             httponly=True,
             secure=should_use_secure_cookie(self),
-            samesite='Strict',
+            samesite=session_samesite(user_type),
         )
 
         response: Dict[str, Any] = {'user': user_type}
